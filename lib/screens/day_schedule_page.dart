@@ -2,198 +2,200 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class DaySchedulePage extends StatefulWidget {
-
-  final String day;
+  final DateTime date;
 
   const DaySchedulePage({
     super.key,
-    required this.day,
+    required this.date,
   });
 
   @override
-  State<DaySchedulePage> createState() =>
-      _DaySchedulePageState();
+  State<DaySchedulePage> createState() => _DaySchedulePageState();
 }
 
-class _DaySchedulePageState
-    extends State<DaySchedulePage> {
-
+class _DaySchedulePageState extends State<DaySchedulePage> {
   String selectedGroup = '';
   String selectedSubject = '';
   String selectedTeacher = '';
+  String selectedLesson = '1';
 
-  final lessonController = TextEditingController();
-
-  Future<void> addLesson() async {
-
-    await FirebaseFirestore.instance
-        .collection('schedule')
-        .add({
-
-      'day': widget.day,
-      'group': selectedGroup,
-      'subject': selectedSubject,
-      'teacher': selectedTeacher,
-      'lesson': lessonController.text,
-    });
-
-    Navigator.pop(context);
-
-    lessonController.clear();
+  String get dateKey {
+    return "${widget.date.year}-"
+        "${widget.date.month.toString().padLeft(2, '0')}-"
+        "${widget.date.day.toString().padLeft(2, '0')}";
   }
 
-  void showAddLessonDialog() async {
-
-    final groupsSnapshot =
-        await FirebaseFirestore.instance
-            .collection('groups')
-            .get();
-
-    final subjectsSnapshot =
-        await FirebaseFirestore.instance
-            .collection('subjects')
-            .get();
-
-    final teachersSnapshot =
-        await FirebaseFirestore.instance
-            .collection('users')
-            .where('role', isEqualTo: 'teacher')
-            .get();
-
-    final groups = groupsSnapshot.docs;
-    final subjects = subjectsSnapshot.docs;
-
-    if (groups.isNotEmpty) {
-      selectedGroup = groups.first['name'];
+  Stream<DocumentSnapshot> get scheduleStream {
+    if (selectedGroup.isEmpty) {
+      return const Stream.empty();
     }
 
-    if (subjects.isNotEmpty) {
-      selectedSubject = subjects.first['name'];
+    return FirebaseFirestore.instance
+        .collection('schedule')
+        .doc(selectedGroup)
+        .collection('days')
+        .doc(dateKey)
+        .snapshots();
+  }
+
+  Future<void> addLesson(List lessons) async {
+    if (lessons.length >= 5) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Максимум 5 уроков")),
+      );
+      return;
     }
 
-    final teachers = teachersSnapshot.docs
-        .where((teacher) =>
-            teacher['subject'] == selectedSubject)
-        .toList();
+    final exists = lessons.any(
+      (l) => l['lesson'] == selectedLesson,
+    );
 
-    if (teachers.isNotEmpty) {
-      selectedTeacher = teachers.first['name'];
+    if (exists) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Эта пара уже занята")),
+      );
+      return;
     }
+
+    final docRef = FirebaseFirestore.instance
+        .collection('schedule')
+        .doc(selectedGroup)
+        .collection('days')
+        .doc(dateKey);
+
+    await docRef.set({
+      'date': dateKey,
+      'group': selectedGroup,
+      'lessons': FieldValue.arrayUnion([
+        {
+          'lesson': selectedLesson,
+          'subject': selectedSubject,
+          'teacher': selectedTeacher,
+        }
+      ])
+    }, SetOptions(merge: true));
+
+    if (mounted) Navigator.pop(context);
+  }
+
+  void showAddDialog(List lessons) async {
+    final groups = await FirebaseFirestore.instance.collection('groups').get();
+    final subjects = await FirebaseFirestore.instance.collection('subjects').get();
+    final teachers = await FirebaseFirestore.instance
+        .collection('users')
+        .where('role', isEqualTo: 'teacher')
+        .get();
+
+    selectedGroup =
+        groups.docs.isNotEmpty ? groups.docs.first['name'] : '';
+    selectedSubject =
+        subjects.docs.isNotEmpty ? subjects.docs.first['name'] : '';
 
     showDialog(
       context: context,
       builder: (context) {
-
         return StatefulBuilder(
-          builder: (context, setDialogState) {
+          builder: (context, setStateDialog) {
+            final filteredTeachers = teachers.docs
+                .where((t) => t['subject'] == selectedSubject)
+                .toList();
 
-            final filteredTeachers =
-                teachersSnapshot.docs
-                    .where((teacher) =>
-                        teacher['subject'] ==
-                        selectedSubject)
-                    .toList();
+            if (filteredTeachers.isNotEmpty &&
+                selectedTeacher.isEmpty) {
+              selectedTeacher = filteredTeachers.first['name'];
+            }
 
             return AlertDialog(
-              title: Text(widget.day),
+              title: Text(dateKey),
 
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  /// GROUP
+                  DropdownButton<String>(
+                    value: selectedGroup.isEmpty ? null : selectedGroup,
+                    isExpanded: true,
+                    items: groups.docs.map<DropdownMenuItem<String>>((g) {
+                      return DropdownMenuItem<String>(
+                        value: g['name'].toString(),
+                        child: Text(g['name'].toString()),
+                      );
+                    }).toList(),
+                    onChanged: (v) {
+                      setStateDialog(() {
+                        selectedGroup = v!;
+                      });
+                    },
+                  ),
 
-                    DropdownButton<String>(
-                      value: selectedGroup,
-                      isExpanded: true,
+                  const SizedBox(height: 10),
 
-                      items: groups.map((group) {
+                  /// SUBJECT
+                  DropdownButton<String>(
+                    value: selectedSubject.isEmpty ? null : selectedSubject,
+                    isExpanded: true,
+                    items: subjects.docs.map<DropdownMenuItem<String>>((s) {
+                      return DropdownMenuItem<String>(
+                        value: s['name'].toString(),
+                        child: Text(s['name'].toString()),
+                      );
+                    }).toList(),
+                    onChanged: (v) {
+                      setStateDialog(() {
+                        selectedSubject = v!;
+                        selectedTeacher = '';
+                      });
+                    },
+                  ),
 
-                        return DropdownMenuItem<String>(
-                          value: group['name'].toString(),
-                          child: Text(group['name']),
-                        );
-                      }).toList(),
+                  const SizedBox(height: 10),
 
-                      onChanged: (value) {
+                  /// TEACHER
+                  DropdownButton<String>(
+                    value: selectedTeacher.isEmpty ? null : selectedTeacher,
+                    isExpanded: true,
+                    items: filteredTeachers.map<DropdownMenuItem<String>>((t) {
+                      return DropdownMenuItem<String>(
+                        value: t['name'].toString(),
+                        child: Text(t['name'].toString()),
+                      );
+                    }).toList(),
+                    onChanged: (v) {
+                      setStateDialog(() {
+                        selectedTeacher = v!;
+                      });
+                    },
+                  ),
 
-                        setDialogState(() {
-                          selectedGroup = value!;
-                        });
-                      },
-                    ),
+                  const SizedBox(height: 10),
 
-                    const SizedBox(height: 10),
-
-                    DropdownButton<String>(
-                      value: selectedSubject,
-                      isExpanded: true,
-
-                      items: subjects.map((subject) {
-
-                        return DropdownMenuItem<String>(
-                          value: subject['name'].toString(),
-                          child: Text(subject['name']),
-                        );
-                      }).toList(),
-
-                      onChanged: (value) {
-
-                        setDialogState(() {
-
-                          selectedSubject = value!;
-
-                          final newTeachers =
-                              teachersSnapshot.docs
-                                  .where((teacher) =>
-                                      teacher['subject']
-                                      == selectedSubject)
-                                  .toList();
-
-                          if (newTeachers.isNotEmpty) {
-                            selectedTeacher =
-                                newTeachers.first['name'];
-                          }
-                        });
-                      },
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    DropdownButton<String>(
-                      value: selectedTeacher,
-                      isExpanded: true,
-
-                      items: filteredTeachers.map((teacher) {
-
-                        return DropdownMenuItem<String>(
-                          value: teacher['name'].toString(),
-                          child: Text(teacher['name']),
-                        );
-                      }).toList(),
-
-                      onChanged: (value) {
-
-                        setDialogState(() {
-                          selectedTeacher = value!;
-                        });
-                      },
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    TextField(
-                      controller: lessonController,
-                      decoration: const InputDecoration(
-                        labelText: "Номер пары",
-                      ),
-                    ),
-                  ],
-                ),
+                  /// LESSON
+                  DropdownButton<String>(
+                    value: selectedLesson,
+                    isExpanded: true,
+                    items: const [
+                      DropdownMenuItem(value: '1', child: Text('1 пара (08:00)')),
+                      DropdownMenuItem(value: '2', child: Text('2 пара (09:40)')),
+                      DropdownMenuItem(value: '3', child: Text('3 пара (11:20)')),
+                      DropdownMenuItem(value: '4', child: Text('4 пара (13:00)')),
+                      DropdownMenuItem(value: '5', child: Text('5 пара (14:40)')),
+                    ],
+                    onChanged: (v) {
+                      setStateDialog(() {
+                        selectedLesson = v!;
+                      });
+                    },
+                  ),
+                ],
               ),
 
               actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Отмена"),
+                ),
                 ElevatedButton(
-                  onPressed: addLesson,
+                  onPressed: () => addLesson(lessons),
                   child: const Text("Добавить"),
                 ),
               ],
@@ -204,81 +206,72 @@ class _DaySchedulePageState
     );
   }
 
-  Future<void> deleteLesson(String id) async {
-
-    await FirebaseFirestore.instance
-        .collection('schedule')
-        .doc(id)
-        .delete();
-  }
-
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-
-      appBar: AppBar(
-        title: Text(widget.day),
-      ),
+      appBar: AppBar(title: Text(dateKey)),
 
       floatingActionButton: FloatingActionButton(
-        onPressed: showAddLessonDialog,
+        onPressed: () async {
+          final snapshot = await scheduleStream.first;
+          final data = snapshot.data() as Map<String, dynamic>?;
+
+          final lessons = data?['lessons'] ?? [];
+
+          final groups = await FirebaseFirestore.instance.collection('groups').get();
+          final subjects = await FirebaseFirestore.instance.collection('subjects').get();
+          final teachers = await FirebaseFirestore.instance
+              .collection('users')
+              .where('role', isEqualTo: 'teacher')
+              .get();
+
+            showAddDialog(lessons);
+          {
+            final groups = await FirebaseFirestore.instance.collection('groups').get();
+final subjects = await FirebaseFirestore.instance.collection('subjects').get();
+final teachers = await FirebaseFirestore.instance
+    .collection('users')
+    .where('role', isEqualTo: 'teacher')
+    .get();
+          }
+        },
         child: const Icon(Icons.add),
       ),
 
       body: StreamBuilder(
-        stream: FirebaseFirestore.instance
-            .collection('schedule')
-            .where('day', isEqualTo: widget.day)
-            .snapshots(),
-
+        stream: scheduleStream,
         builder: (context, snapshot) {
 
-          if (!snapshot.hasData) {
-
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
           }
 
-          final lessons = snapshot.data!.docs;
+          if (!snapshot.hasData ||
+              snapshot.data == null ||
+              !snapshot.data!.exists) {
+            return const Center(child: Text("Пар нет"));
+          }
+
+          final data = snapshot.data!.data() as Map<String, dynamic>;
+          final lessons = data['lessons'] ?? [];
 
           if (lessons.isEmpty) {
-
-            return const Center(
-              child: Text("Пар пока нет"),
-            );
+            return const Center(child: Text("Пар нет"));
           }
 
           return ListView.builder(
             itemCount: lessons.length,
-
             itemBuilder: (context, index) {
-
               final lesson = lessons[index];
 
               return Card(
                 margin: const EdgeInsets.all(10),
-
                 child: ListTile(
                   leading: const Icon(Icons.book),
-
                   title: Text(
-                    "Пара ${lesson['lesson']} — ${lesson['subject']}",
+                    "${lesson['lesson']} пара — ${lesson['subject']}",
                   ),
-
-                  subtitle: Text(
-                    "${lesson['group']}\n"
-                    "${lesson['teacher']}",
-                  ),
-
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete),
-
-                    onPressed: () {
-                      deleteLesson(lesson.id);
-                    },
-                  ),
+                  subtitle: Text(lesson['teacher'] ?? ''),
                 ),
               );
             },

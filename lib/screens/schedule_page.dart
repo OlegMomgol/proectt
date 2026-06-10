@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'day_schedule_page.dart';
 
 class SchedulePage extends StatelessWidget {
@@ -7,47 +6,45 @@ class SchedulePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final today = DateTime.now();
 
-    final days = [
-      'Понедельник',
-      'Вторник',
-      'Среда',
-      'Четверг',
-      'Пятница',
-    ];
+    // показываем расписание на 7 дней вперёд
+    final dates = List.generate(
+      7,
+      (index) => today.add(Duration(days: index)),
+    );
 
     return Scaffold(
-
       appBar: AppBar(
         title: const Text("Расписание"),
       ),
-
       body: ListView.builder(
-        itemCount: days.length,
-
+        itemCount: dates.length,
         itemBuilder: (context, index) {
+          final date = dates[index];
 
-          final day = days[index];
+          final formattedDate =
+              "${date.day.toString().padLeft(2, '0')}"
+              ".${date.month.toString().padLeft(2, '0')}"
+              ".${date.year}";
 
           return Card(
             margin: const EdgeInsets.all(10),
-
             child: ListTile(
-              leading: const Icon(Icons.calendar_today),
+              leading: const Icon(Icons.calendar_month),
 
-              title: Text(day),
+              title: Text(formattedDate),
 
-              trailing: const Icon(
-                Icons.arrow_forward_ios,
-              ),
+              subtitle: Text(_weekdayName(date.weekday)),
+
+              trailing: const Icon(Icons.arrow_forward_ios),
 
               onTap: () {
-
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) =>
-                        DaySchedulePage(day: day),
+                        DaySchedulePage(date: date),
                   ),
                 );
               },
@@ -56,5 +53,19 @@ class SchedulePage extends StatelessWidget {
         },
       ),
     );
+  }
+
+  String _weekdayName(int weekday) {
+    const days = [
+      "Понедельник",
+      "Вторник",
+      "Среда",
+      "Четверг",
+      "Пятница",
+      "Суббота",
+      "Воскресенье",
+    ];
+
+    return days[weekday - 1];
   }
 }
