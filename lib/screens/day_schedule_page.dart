@@ -212,31 +212,28 @@ class _DaySchedulePageState extends State<DaySchedulePage> {
       appBar: AppBar(title: Text(dateKey)),
 
       floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final snapshot = await scheduleStream.first;
-          final data = snapshot.data() as Map<String, dynamic>?;
+  onPressed: () async {
 
-          final lessons = data?['lessons'] ?? [];
+    List lessons = [];
 
-          final groups = await FirebaseFirestore.instance.collection('groups').get();
-          final subjects = await FirebaseFirestore.instance.collection('subjects').get();
-          final teachers = await FirebaseFirestore.instance
-              .collection('users')
-              .where('role', isEqualTo: 'teacher')
-              .get();
+    final snapshot = await FirebaseFirestore.instance
+        .collection('schedule')
+        .doc(selectedGroup)
+        .collection('days')
+        .doc(dateKey)
+        .get();
 
-            showAddDialog(lessons);
-          {
-            final groups = await FirebaseFirestore.instance.collection('groups').get();
-final subjects = await FirebaseFirestore.instance.collection('subjects').get();
-final teachers = await FirebaseFirestore.instance
-    .collection('users')
-    .where('role', isEqualTo: 'teacher')
-    .get();
-          }
-        },
-        child: const Icon(Icons.add),
-      ),
+    if (snapshot.exists) {
+      final data = snapshot.data();
+
+      lessons = data?['lessons'] ?? [];
+    }
+
+    showAddDialog(lessons);
+
+  },
+  child: const Icon(Icons.add),
+),
 
       body: StreamBuilder(
         stream: scheduleStream,
