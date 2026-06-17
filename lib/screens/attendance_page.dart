@@ -2,12 +2,19 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class AttendancePage extends StatefulWidget {
-  const AttendancePage({super.key});
+
+  final String group;
+  final String subject;
+
+  const AttendancePage({
+    super.key,
+    required this.group,
+    required this.subject,
+  });
 
   @override
   State<AttendancePage> createState() => _AttendancePageState();
 }
-
 class _AttendancePageState extends State<AttendancePage> {
   String selectedGroup = '';
 
