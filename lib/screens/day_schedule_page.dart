@@ -36,6 +36,23 @@ class _DaySchedulePageState
 
 
 
+  Map<String,String> lessonTimes = {
+
+    '1':'8:00 - 9:30',
+
+    '2':'9:40 - 11:10',
+
+    '3':'11:30 - 13:00',
+
+    '4':'13:10 - 14:40',
+
+    '5':'15:00 - 16:30',
+
+  };
+
+
+
+
   String get dateKey {
 
     return "${widget.date.year}-"
@@ -118,9 +135,7 @@ class _DaySchedulePageState
           .showSnackBar(
 
         const SnackBar(
-          content: Text(
-              "Максимум 5 пар"
-          ),
+          content: Text("Максимум 5 пар"),
         ),
 
       );
@@ -159,11 +174,11 @@ class _DaySchedulePageState
 
     await ref.set({
 
+
       'date':dateKey,
 
 
       'lessons':
-
       FieldValue.arrayUnion([
 
 
@@ -336,7 +351,6 @@ class _DaySchedulePageState
 
                   content:
                   Column(
-
                     mainAxisSize:
                     MainAxisSize.min,
 
@@ -346,6 +360,8 @@ class _DaySchedulePageState
 
 
                       DropdownButton<String>(
+
+
                         hint:
                         const Text("Группа"),
 
@@ -368,8 +384,7 @@ class _DaySchedulePageState
 
                             child:
                             Text(
-                                g['name']
-                                    .toString()
+                                g['name'].toString()
                             ),
 
 
@@ -382,17 +397,16 @@ class _DaySchedulePageState
 
                         onChanged:(v){
 
-
                           setDialog((){
 
                             selectedGroup=v!;
 
                           });
 
-
                         },
 
                       ),
+
 
 
 
@@ -422,8 +436,7 @@ class _DaySchedulePageState
 
                             child:
                             Text(
-                                s['name']
-                                    .toString()
+                                s['name'].toString()
                             ),
 
 
@@ -478,8 +491,7 @@ class _DaySchedulePageState
 
                             child:
                             Text(
-                                t['name']
-                                    .toString()
+                                t['name'].toString()
                             ),
 
 
@@ -509,21 +521,15 @@ class _DaySchedulePageState
 
 
 
+
                       DropdownButton<String>(
 
 
                         value:selectedLesson,
 
 
-                        items:[
-
-                          '1',
-                          '2',
-                          '3',
-                          '4',
-                          '5'
-
-                        ].map((e){
+                        items:
+                        lessonTimes.keys.map((e){
 
 
                           return DropdownMenuItem(
@@ -534,7 +540,7 @@ class _DaySchedulePageState
 
                             child:
                             Text(
-                                "Пара $e"
+                              "Пара $e (${lessonTimes[e]})",
                             ),
 
 
@@ -558,12 +564,14 @@ class _DaySchedulePageState
 
                         },
 
-                      )
+                      ),
+
 
 
                     ],
 
                   ),
+
 
 
 
@@ -589,13 +597,14 @@ class _DaySchedulePageState
                   ],
 
 
+
                 );
+
 
               },
 
 
             );
-
 
 
           },
@@ -631,11 +640,11 @@ class _DaySchedulePageState
 
       appBar:
       AppBar(
-
         title:
         Text(dateKey),
 
       ),
+
 
 
 
@@ -654,6 +663,7 @@ class _DaySchedulePageState
 
 
       ),
+
 
 
 
@@ -725,8 +735,7 @@ class _DaySchedulePageState
 
                     child:
                     Text(
-                        g['name']
-                            .toString()
+                        g['name'].toString()
                     ),
 
 
@@ -759,6 +768,7 @@ class _DaySchedulePageState
             },
 
           ),
+
 
 
 
@@ -863,7 +873,7 @@ class _DaySchedulePageState
                         title:
                         Text(
 
-                          "Пара ${lesson['lesson']} - ${lesson['subject']}",
+                          "Пара ${lesson['lesson']} - ${lesson['subject']} (${lessonTimes[lesson['lesson']]})",
 
                         ),
 
