@@ -48,6 +48,7 @@ class _DaySchedulePageState
 
 
 
+
   Stream<DocumentSnapshot> get scheduleStream {
 
 
@@ -77,6 +78,8 @@ class _DaySchedulePageState
 
 
 
+
+
   Future<void> addLesson() async {
 
 
@@ -99,6 +102,7 @@ class _DaySchedulePageState
     List lessons = [];
 
 
+
     if(snap.exists){
 
       lessons = snap['lessons'] ?? [];
@@ -107,15 +111,16 @@ class _DaySchedulePageState
 
 
 
-    if(lessons.length >= 5){
 
+    if(lessons.length >= 5){
 
       ScaffoldMessenger.of(context)
           .showSnackBar(
 
         const SnackBar(
-          content:
-          Text("Максимум 5 пар"),
+          content: Text(
+              "Максимум 5 пар"
+          ),
         ),
 
       );
@@ -123,6 +128,7 @@ class _DaySchedulePageState
       return;
 
     }
+
 
 
 
@@ -136,12 +142,12 @@ class _DaySchedulePageState
           .showSnackBar(
 
         const SnackBar(
-          content:
-          Text("Эта пара уже занята"),
+          content: Text(
+              "Эта пара уже занята"
+          ),
         ),
 
       );
-
 
       return;
 
@@ -153,31 +159,27 @@ class _DaySchedulePageState
 
     await ref.set({
 
+      'date':dateKey,
 
-      "date":dateKey,
 
+      'lessons':
 
-      "lessons":
       FieldValue.arrayUnion([
 
 
         {
 
+          'lesson':selectedLesson,
 
-          "lesson":selectedLesson,
+          'subject':selectedSubject,
 
-
-          "subject":selectedSubject,
-
-
-          "teacher":selectedTeacher,
+          'teacher':selectedTeacher,
 
 
         }
 
 
       ])
-
 
 
     },SetOptions(merge:true));
@@ -202,6 +204,36 @@ class _DaySchedulePageState
 
 
 
+  Future<void> deleteLesson(Map lesson) async {
+
+
+    await FirebaseFirestore.instance
+
+        .collection('schedule')
+
+        .doc(viewGroup)
+
+        .collection('days')
+
+        .doc(dateKey)
+
+        .update({
+
+
+      'lessons':
+      FieldValue.arrayRemove([lesson])
+
+
+    });
+
+
+  }
+
+
+
+
+
+
 
 
 
@@ -210,12 +242,10 @@ class _DaySchedulePageState
 
     showDialog(
 
-
       context: context,
 
 
       builder:(context){
-
 
 
         return FutureBuilder(
@@ -267,24 +297,22 @@ class _DaySchedulePageState
 
 
 
+
             final groups =
             (snapshot.data![0]
-            as QuerySnapshot)
-                .docs;
+            as QuerySnapshot).docs;
 
 
 
             final subjects =
             (snapshot.data![1]
-            as QuerySnapshot)
-                .docs;
+            as QuerySnapshot).docs;
 
 
 
             final teachers =
             (snapshot.data![2]
-            as QuerySnapshot)
-                .docs;
+            as QuerySnapshot).docs;
 
 
 
@@ -292,12 +320,12 @@ class _DaySchedulePageState
 
             return StatefulBuilder(
 
-
               builder:(context,setDialog){
 
 
 
                 return AlertDialog(
+
 
 
                   title:
@@ -309,21 +337,15 @@ class _DaySchedulePageState
                   content:
                   Column(
 
-
                     mainAxisSize:
                     MainAxisSize.min,
-
 
 
                     children:[
 
 
 
-
-
                       DropdownButton<String>(
-
-
                         hint:
                         const Text("Группа"),
 
@@ -334,8 +356,9 @@ class _DaySchedulePageState
 
 
 
-                        items:
-                        groups.map((g){
+                        items:groups.map((g){
+
+
                           return DropdownMenuItem(
 
 
@@ -364,15 +387,12 @@ class _DaySchedulePageState
 
                             selectedGroup=v!;
 
-
                           });
 
 
                         },
 
-
                       ),
-
 
 
 
@@ -390,8 +410,7 @@ class _DaySchedulePageState
 
 
 
-                        items:
-                        subjects.map((s){
+                        items:subjects.map((s){
 
 
                           return DropdownMenuItem(
@@ -428,7 +447,6 @@ class _DaySchedulePageState
 
                         },
 
-
                       ),
 
 
@@ -448,8 +466,7 @@ class _DaySchedulePageState
 
 
 
-                        items:
-                        teachers.map((t){
+                        items:teachers.map((t){
 
 
                           return DropdownMenuItem(
@@ -486,7 +503,6 @@ class _DaySchedulePageState
 
                         },
 
-
                       ),
 
 
@@ -499,8 +515,8 @@ class _DaySchedulePageState
                         value:selectedLesson,
 
 
-                        items:
-                        [
+                        items:[
+
                           '1',
                           '2',
                           '3',
@@ -545,9 +561,7 @@ class _DaySchedulePageState
                       )
 
 
-
                     ],
-
 
                   ),
 
@@ -555,7 +569,6 @@ class _DaySchedulePageState
 
 
                   actions:[
-
 
 
                     ElevatedButton(
@@ -576,12 +589,13 @@ class _DaySchedulePageState
                   ],
 
 
-
                 );
 
               },
 
+
             );
+
 
 
           },
@@ -615,7 +629,6 @@ class _DaySchedulePageState
 
 
 
-
       appBar:
       AppBar(
 
@@ -627,8 +640,9 @@ class _DaySchedulePageState
 
 
 
-
       floatingActionButton:
+
+
       FloatingActionButton(
 
 
@@ -646,9 +660,7 @@ class _DaySchedulePageState
 
 
 
-
       body:
-
 
       Column(
 
@@ -670,11 +682,13 @@ class _DaySchedulePageState
             builder:(context,snapshot){
 
 
+
               if(!snapshot.hasData){
 
                 return const SizedBox();
 
               }
+
 
 
 
@@ -686,7 +700,6 @@ class _DaySchedulePageState
               return DropdownButton<String>(
 
 
-
                 hint:
                 const Text(
                     "Выберите группу"
@@ -694,15 +707,13 @@ class _DaySchedulePageState
 
 
 
-                value:
-                viewGroup.isEmpty
+                value:viewGroup.isEmpty
                     ? null
                     : viewGroup,
 
 
 
-                items:
-                groups.map((g){
+                items:groups.map((g){
 
 
                   return DropdownMenuItem(
@@ -740,14 +751,14 @@ class _DaySchedulePageState
 
                 },
 
+
               );
+
 
 
             },
 
-
           ),
-
 
 
 
@@ -757,6 +768,7 @@ class _DaySchedulePageState
 
 
             child:
+
             StreamBuilder(
 
 
@@ -785,6 +797,7 @@ class _DaySchedulePageState
 
 
 
+
                 if(!snapshot.hasData ||
                     !snapshot.data!.exists){
 
@@ -804,10 +817,12 @@ class _DaySchedulePageState
 
 
 
+
                 final data =
                 snapshot.data!
                     .data()
                 as Map<String,dynamic>;
+
 
 
 
@@ -817,12 +832,12 @@ class _DaySchedulePageState
 
 
 
+
                 return ListView.builder(
 
 
 
-                  itemCount:
-                  lessons.length,
+                  itemCount:lessons.length,
 
 
 
@@ -830,8 +845,9 @@ class _DaySchedulePageState
 
 
 
-                    final l =
+                    final lesson =
                     lessons[index];
+
 
 
 
@@ -846,14 +862,42 @@ class _DaySchedulePageState
 
                         title:
                         Text(
-                          "Пара ${l['lesson']} - ${l['subject']}",
+
+                          "Пара ${lesson['lesson']} - ${lesson['subject']}",
+
                         ),
 
 
 
                         subtitle:
                         Text(
-                          l['teacher'] ?? '',
+                            lesson['teacher'] ?? ''
+                        ),
+
+
+
+
+                        trailing:
+
+                        IconButton(
+
+
+                          icon:
+                          const Icon(
+                              Icons.delete
+                          ),
+
+
+
+                          onPressed:(){
+
+
+                            deleteLesson(lesson);
+
+
+                          },
+
+
                         ),
 
 
@@ -864,6 +908,7 @@ class _DaySchedulePageState
                     );
 
 
+
                   },
 
 
@@ -872,6 +917,7 @@ class _DaySchedulePageState
 
 
               },
+
 
             ),
 
@@ -886,12 +932,12 @@ class _DaySchedulePageState
       ),
 
 
-
     );
 
 
 
   }
+
 
 
 }
