@@ -1,268 +1,79 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'attendance_page.dart';
-
 
 class TeacherSchedulePage extends StatelessWidget {
-
-
-  final String teacherName;
-
+  final String teacherId;
 
   const TeacherSchedulePage({
-
     super.key,
-
-    required this.teacherName,
-
+    required this.teacherId,
   });
-
-
 
   @override
   Widget build(BuildContext context) {
 
-
     return Scaffold(
-
       appBar: AppBar(
-
-        title: const Text(
-          "Мои пары",
-        ),
-
+        title: const Text("Мои пары"),
       ),
 
-
-
-      body: StreamBuilder<QuerySnapshot>(
-
-
+      body: StreamBuilder(
         stream: FirebaseFirestore.instance
-            .collectionGroup('days')
+            .collection('schedule')
             .snapshots(),
 
+        builder: (context, snapshot) {
 
-
-        builder: (context,snapshot){
-
-
-          if(snapshot.connectionState ==
-              ConnectionState.waiting){
-
+          if (!snapshot.hasData) {
             return const Center(
-
-              child:
-              CircularProgressIndicator(),
-
+              child: CircularProgressIndicator(),
             );
-
           }
 
 
-
-          List myLessons = [];
-
+          final lessons = snapshot.data!.docs;
 
 
-          if(snapshot.hasData){
-
-
-
-            for(var doc in snapshot.data!.docs){
-
-
-
-              final data =
-              doc.data() as Map<String,dynamic>;
-
-
-
-              if(data['lessons'] != null){
-
-
-
-                for(var lesson in data['lessons']){
-
-
-                  if(
-                  lesson['teacher']
-                      .toString()
-                      ==
-                      teacherName
-                  ){
-
-
-                    myLessons.add({
-
-                      "group":
-                      data['group'] ?? '',
-
-
-                      "subject":
-                      lesson['subject'] ?? '',
-
-
-                      "lesson":
-                      lesson['lesson'] ?? '',
-
-
-                    });
-
-
-
-                  }
-
-
-                }
-
-
-              }
-
-
-
-            }
-
-
-
-          }
-
-
-
-
-          if(myLessons.isEmpty){
-
-
+          if (lessons.isEmpty) {
             return const Center(
-
-              child: Text(
-                "У вас нет пар",
-              ),
-
+              child: Text("У вас нет пар"),
             );
-
-
           }
-
-
-
 
 
           return ListView.builder(
 
+            itemCount: lessons.length,
 
-            itemCount: myLessons.length,
+            itemBuilder: (context, index) {
 
-
-
-            itemBuilder:(context,index){
-
-
-
-              final item =
-              myLessons[index];
-
-
+              final data = lessons[index].data();
 
 
               return Card(
 
-
                 child: ListTile(
 
-
                   title: Text(
-
-                    "Пара ${item['lesson']} - ${item['subject']}",
-
-
-                    style:
-                    const TextStyle(
-
-                      fontSize:18,
-
-                      fontWeight:
-                      FontWeight.bold,
-
-                    ),
-
+                    "${data['subject']}",
                   ),
-
 
 
                   subtitle: Text(
-
-                    "Группа: ${item['group']}",
-
+                    "День: ${data['day']}\n"
+                    "Группа: ${data['group']}\n"
+                    "Пара: ${data['lesson']}\n"
+                    "Преподаватель: ${data['teacher']}",
                   ),
-
-
-
-                  trailing:
-                  const Icon(
-                    Icons.arrow_forward_ios,
-                  ),
-
-
-
-
-                  onTap: (){
-
-
-                    Navigator.push(
-
-                      context,
-
-
-                      MaterialPageRoute(
-
-                        builder:(context)=>
-
-
-                            AttendancePage(
-
-                              group:
-                              item['group'],
-
-
-                              subject:
-                              item['subject'],
-
-
-                            ),
-
-
-                      ),
-
-
-                    );
-
-
-                  },
-
 
                 ),
-
-
               );
 
-
             },
-
-
           );
 
-
-
         },
-
-
       ),
-
-
     );
-
-
   }
-
 }
