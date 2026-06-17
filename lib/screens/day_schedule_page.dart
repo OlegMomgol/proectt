@@ -21,9 +21,12 @@ class DaySchedulePage extends StatefulWidget {
 
 
 
+
 class _DaySchedulePageState
     extends State<DaySchedulePage> {
 
+
+  String viewGroup = '';
 
   String selectedGroup = '';
   String selectedSubject = '';
@@ -44,12 +47,29 @@ class _DaySchedulePageState
 
 
 
-  Stream<QuerySnapshot> get scheduleStream {
+
+  Stream<DocumentSnapshot> get scheduleStream {
+
+
+    if(viewGroup.isEmpty){
+
+      return const Stream.empty();
+
+    }
+
 
     return FirebaseFirestore.instance
-        .collectionGroup('days')
-        .where('date', isEqualTo: dateKey)
+
+        .collection('schedule')
+
+        .doc(viewGroup)
+
+        .collection('days')
+
+        .doc(dateKey)
+
         .snapshots();
+
 
   }
 
@@ -61,38 +81,41 @@ class _DaySchedulePageState
 
 
     final ref = FirebaseFirestore.instance
+
         .collection('schedule')
+
         .doc(selectedGroup)
+
         .collection('days')
+
         .doc(dateKey);
 
 
 
-    final old = await ref.get();
+    final snap = await ref.get();
 
 
 
     List lessons = [];
 
 
-    if(old.exists){
+    if(snap.exists){
 
-      lessons = old['lessons'] ?? [];
+      lessons = snap['lessons'] ?? [];
 
     }
-
 
 
 
     if(lessons.length >= 5){
 
+
       ScaffoldMessenger.of(context)
           .showSnackBar(
 
         const SnackBar(
-          content: Text(
-              "Максимум 5 пар в день"
-          ),
+          content:
+          Text("Максимум 5 пар"),
         ),
 
       );
@@ -104,46 +127,51 @@ class _DaySchedulePageState
 
 
 
-    bool exists = lessons.any(
+    if(lessons.any(
             (e)=>e['lesson']==selectedLesson
-    );
+    )){
 
-
-
-    if(exists){
 
       ScaffoldMessenger.of(context)
           .showSnackBar(
 
         const SnackBar(
-          content: Text(
-              "Эта пара уже занята"
-          ),
+          content:
+          Text("Эта пара уже занята"),
         ),
 
       );
 
+
       return;
 
     }
+
 
 
 
 
     await ref.set({
 
+
       "date":dateKey,
+
 
       "lessons":
       FieldValue.arrayUnion([
 
+
         {
+
 
           "lesson":selectedLesson,
 
+
           "subject":selectedSubject,
 
+
           "teacher":selectedTeacher,
+
 
         }
 
@@ -151,7 +179,16 @@ class _DaySchedulePageState
       ])
 
 
+
     },SetOptions(merge:true));
+
+
+
+    setState((){
+
+      viewGroup = selectedGroup;
+
+    });
 
 
 
@@ -166,10 +203,13 @@ class _DaySchedulePageState
 
 
 
+
+
   void showAddDialog(){
 
 
     showDialog(
+
 
       context: context,
 
@@ -177,9 +217,11 @@ class _DaySchedulePageState
       builder:(context){
 
 
+
         return FutureBuilder(
 
-          future: Future.wait([
+
+          future:Future.wait([
 
 
             FirebaseFirestore.instance
@@ -201,11 +243,12 @@ class _DaySchedulePageState
                 .get(),
 
 
-
           ]),
 
 
+
           builder:(context,snapshot){
+
 
 
             if(!snapshot.hasData){
@@ -225,20 +268,23 @@ class _DaySchedulePageState
 
 
             final groups =
-                (snapshot.data![0]
-                as QuerySnapshot).docs;
+            (snapshot.data![0]
+            as QuerySnapshot)
+                .docs;
 
 
 
             final subjects =
-                (snapshot.data![1]
-                as QuerySnapshot).docs;
+            (snapshot.data![1]
+            as QuerySnapshot)
+                .docs;
 
 
 
             final teachers =
-                (snapshot.data![2]
-                as QuerySnapshot).docs;
+            (snapshot.data![2]
+            as QuerySnapshot)
+                .docs;
 
 
 
@@ -246,286 +292,255 @@ class _DaySchedulePageState
 
             return StatefulBuilder(
 
-                builder:(context,setDialog){
 
+              builder:(context,setDialog){
 
 
-                  return AlertDialog(
 
+                return AlertDialog(
 
-                    title:
-                    Text(dateKey),
 
+                  title:
+                  Text(dateKey),
 
 
 
-                    content:
-                    Column(
 
+                  content:
+                  Column(
 
-                      mainAxisSize:
-                      MainAxisSize.min,
 
+                    mainAxisSize:
+                    MainAxisSize.min,
 
-                      children:[
 
 
+                    children:[
 
 
 
-                        DropdownButton<String>(
 
 
-                          hint:
-                          const Text(
-                              "Группа"
-                          ),
+                      DropdownButton<String>(
 
 
-                          value:selectedGroup.isEmpty
-                              ? null
-                              : selectedGroup,
+                        hint:
+                        const Text("Группа"),
 
 
-                          items:
-                          groups.map((g){
+                        value:selectedGroup.isEmpty
+                            ? null
+                            : selectedGroup,
 
 
-                            return DropdownMenuItem<String>(
 
+                        items:
+                        groups.map((g){
+                          return DropdownMenuItem(
 
-                              value:
-                              g['name'].toString(),
 
+                            value:
+                            g['name'].toString(),
 
-                              child:
-                              Text(
-                                g['name'].toString(),
-                              ),
 
+                            child:
+                            Text(
+                                g['name']
+                                    .toString()
+                            ),
 
-                            );
 
+                          );
 
-                          }).toList(),
 
+                        }).toList(),
 
 
-                          onChanged:(v){
 
+                        onChanged:(v){
 
-                            setDialog((){
 
-                              selectedGroup=v!;
+                          setDialog((){
 
-                            });
+                            selectedGroup=v!;
 
 
-                          },
+                          });
 
 
-                        ),
+                        },
 
 
+                      ),
 
 
 
-                        DropdownButton<String>(
 
 
-                          hint:
-                          const Text(
-                              "Предмет"
-                          ),
+                      DropdownButton<String>(
 
 
-                          value:selectedSubject.isEmpty
-                              ? null
-                              : selectedSubject,
+                        hint:
+                        const Text("Предмет"),
 
 
+                        value:selectedSubject.isEmpty
+                            ? null
+                            : selectedSubject,
 
-                          items:
-                          subjects.map((s){
 
 
-                            return DropdownMenuItem<String>(
+                        items:
+                        subjects.map((s){
 
 
-                              value:
-                              s['name'].toString(),
+                          return DropdownMenuItem(
 
 
-                              child:
-                              Text(
-                                  s['name'].toString()
-                              ),
+                            value:
+                            s['name'].toString(),
 
 
-                            );
+                            child:
+                            Text(
+                                s['name']
+                                    .toString()
+                            ),
 
 
-                          }).toList(),
+                          );
 
 
+                        }).toList(),
 
-                          onChanged:(v){
 
 
-                            setDialog((){
+                        onChanged:(v){
 
-                              selectedSubject=v!;
 
+                          setDialog((){
 
-                            });
+                            selectedSubject=v!;
 
 
-                          },
+                          });
 
 
-                        ),
+                        },
 
 
+                      ),
 
 
 
 
-                        DropdownButton<String>(
 
+                      DropdownButton<String>(
 
-                          hint:
-                          const Text(
-                              "Учитель"
-                          ),
 
+                        hint:
+                        const Text("Учитель"),
 
-                          value:selectedTeacher.isEmpty
-                              ? null
-                              : selectedTeacher,
 
+                        value:selectedTeacher.isEmpty
+                            ? null
+                            : selectedTeacher,
 
 
-                          items:
-                          teachers.map((t){
 
+                        items:
+                        teachers.map((t){
 
-                            return DropdownMenuItem<String>(
 
+                          return DropdownMenuItem(
 
-                              value:
-                              t['name'].toString(),
 
+                            value:
+                            t['name'].toString(),
 
-                              child:
-                              Text(
-                                  t['name'].toString()
-                              ),
 
+                            child:
+                            Text(
+                                t['name']
+                                    .toString()
+                            ),
 
-                            );
 
+                          );
 
-                          }).toList(),
 
+                        }).toList(),
 
 
-                          onChanged:(v){
 
+                        onChanged:(v){
 
-                            setDialog((){
 
-                              selectedTeacher=v!;
+                          setDialog((){
 
+                            selectedTeacher=v!;
 
-                            });
 
+                          });
 
-                          },
 
+                        },
 
-                        ),
 
+                      ),
 
 
 
 
-                        DropdownButton<String>(
 
+                      DropdownButton<String>(
 
-                          value:selectedLesson,
 
+                        value:selectedLesson,
 
-                          items:
-                          [
-                            '1',
-                            '2',
-                            '3',
-                            '4',
-                            '5'
-                          ]
-                              .map((e){
 
+                        items:
+                        [
+                          '1',
+                          '2',
+                          '3',
+                          '4',
+                          '5'
 
-                            return DropdownMenuItem<String>(
+                        ].map((e){
 
 
-                              value:e,
+                          return DropdownMenuItem(
 
 
-                              child:
-                              Text(
-                                  "Пара $e"
-                              ),
+                            value:e,
 
 
-                            );
+                            child:
+                            Text(
+                                "Пара $e"
+                            ),
 
 
-                          })
-                              .toList(),
+                          );
 
 
+                        }).toList(),
 
-                          onChanged:(v){
 
 
-                            setDialog((){
+                        onChanged:(v){
 
-                              selectedLesson=v!;
 
+                          setDialog((){
 
-                            });
+                            selectedLesson=v!;
 
 
-                          },
+                          });
 
-                        ),
 
-
-
-                      ],
-
-
-                    ),
-
-
-
-
-                    actions:[
-
-
-
-                      ElevatedButton(
-
-
-                        onPressed:addLesson,
-
-
-                        child:
-                        const Text(
-                            "Добавить"
-                        ),
-
+                        },
 
                       )
 
@@ -534,14 +549,39 @@ class _DaySchedulePageState
                     ],
 
 
-                  );
+                  ),
 
 
 
-                }
+
+                  actions:[
+
+
+
+                    ElevatedButton(
+
+
+                      onPressed:addLesson,
+
+
+                      child:
+                      const Text(
+                          "Добавить"
+                      ),
+
+
+                    )
+
+
+                  ],
+
+
+
+                );
+
+              },
 
             );
-
 
 
           },
@@ -570,7 +610,9 @@ class _DaySchedulePageState
   Widget build(BuildContext context){
 
 
+
     return Scaffold(
+
 
 
 
@@ -587,8 +629,6 @@ class _DaySchedulePageState
 
 
       floatingActionButton:
-
-
       FloatingActionButton(
 
 
@@ -606,157 +646,244 @@ class _DaySchedulePageState
 
 
 
+
       body:
 
 
-      StreamBuilder(
+      Column(
 
 
-        stream:scheduleStream,
+        children:[
 
 
 
-        builder:(context,snapshot){
+          FutureBuilder(
 
 
+            future:
+            FirebaseFirestore.instance
+                .collection('groups')
+                .get(),
 
-          if(snapshot.connectionState ==
-              ConnectionState.waiting){
 
 
-            return const Center(
+            builder:(context,snapshot){
 
-              child:
-              CircularProgressIndicator(),
 
-            );
+              if(!snapshot.hasData){
 
+                return const SizedBox();
 
-          }
+              }
 
 
 
+              final groups =
+                  snapshot.data!.docs;
 
 
-          if(!snapshot.hasData){
 
+              return DropdownButton<String>(
 
-            return const Center(
 
-              child:
-              Text(
-                  "Пар нет"
-              ),
 
-            );
-
-
-          }
-
-
-
-
-          List allLessons=[];
-
-
-
-          for(var doc in snapshot.data!.docs){
-
-
-            allLessons.addAll(
-                doc['lessons'] ?? []
-            );
-
-
-          }
-
-
-
-
-
-          if(allLessons.isEmpty){
-
-
-            return const Center(
-
-              child:
-              Text(
-                  "Пар нет"
-              ),
-
-            );
-
-
-          }
-
-
-
-
-
-
-          return ListView.builder(
-
-
-            itemCount:
-            allLessons.length,
-
-
-
-            itemBuilder:(context,index){
-
-
-
-              final lesson =
-              allLessons[index];
-
-
-
-
-              return Card(
-
-
-
-                child:
-                ListTile(
-
-
-
-                  title:
-                  Text(
-
-                    "Пара ${lesson['lesson']} - ${lesson['subject']}",
-
-                  ),
-
-
-
-                  subtitle:
-                  Text(
-                    lesson['teacher'] ?? '',
-                  ),
-
-
-
+                hint:
+                const Text(
+                    "Выберите группу"
                 ),
 
 
-              );
 
+                value:
+                viewGroup.isEmpty
+                    ? null
+                    : viewGroup,
+
+
+
+                items:
+                groups.map((g){
+
+
+                  return DropdownMenuItem(
+
+
+                    value:
+                    g['name'].toString(),
+
+
+                    child:
+                    Text(
+                        g['name']
+                            .toString()
+                    ),
+
+
+                  );
+
+
+                }).toList(),
+
+
+
+                onChanged:(v){
+
+
+                  setState((){
+
+
+                    viewGroup=v!;
+
+
+                  });
+
+
+                },
+
+              );
 
 
             },
 
 
-          );
+          ),
 
 
 
-        },
 
+
+
+          Expanded(
+
+
+            child:
+            StreamBuilder(
+
+
+              stream:scheduleStream,
+
+
+
+              builder:(context,snapshot){
+
+
+
+                if(snapshot.connectionState ==
+                    ConnectionState.waiting){
+
+
+                  return const Center(
+
+                    child:
+                    CircularProgressIndicator(),
+
+                  );
+
+
+                }
+
+
+
+
+                if(!snapshot.hasData ||
+                    !snapshot.data!.exists){
+
+
+                  return const Center(
+
+                    child:
+                    Text(
+                        "Пар нет"
+                    ),
+
+                  );
+
+
+                }
+
+
+
+
+                final data =
+                snapshot.data!
+                    .data()
+                as Map<String,dynamic>;
+
+
+
+                final lessons =
+                data['lessons'] ?? [];
+
+
+
+
+                return ListView.builder(
+
+
+
+                  itemCount:
+                  lessons.length,
+
+
+
+                  itemBuilder:(context,index){
+
+
+
+                    final l =
+                    lessons[index];
+
+
+
+                    return Card(
+
+
+
+                      child:
+                      ListTile(
+
+
+
+                        title:
+                        Text(
+                          "Пара ${l['lesson']} - ${l['subject']}",
+                        ),
+
+
+
+                        subtitle:
+                        Text(
+                          l['teacher'] ?? '',
+                        ),
+
+
+
+                      ),
+
+
+                    );
+
+
+                  },
+
+
+                );
+
+
+
+              },
+
+            ),
+
+
+          )
+
+
+
+        ],
 
 
       ),
-
 
 
 
@@ -765,7 +892,6 @@ class _DaySchedulePageState
 
 
   }
-
 
 
 }
