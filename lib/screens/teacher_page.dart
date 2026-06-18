@@ -8,243 +8,330 @@ import 'attendance_page.dart';
 
 class TeacherPage extends StatelessWidget {
 
-  const TeacherPage({super.key});
+const TeacherPage({super.key});
 
 
-  @override
-  Widget build(BuildContext context) {
+@override
+Widget build(BuildContext context) {
 
 
-    final email =
-        FirebaseAuth.instance.currentUser?.email;
+final email =
+FirebaseAuth.instance.currentUser!.email;
 
 
-    return Scaffold(
 
-      appBar: AppBar(
+return Scaffold(
 
-        title: const Text(
-          "Мои пары",
-        ),
 
+appBar: AppBar(
 
-        leading: IconButton(
+title: const Text("Мои пары"),
 
-          icon: const Icon(
-            Icons.arrow_back,
-          ),
 
+leading: IconButton(
 
-          onPressed: () async {
+icon: const Icon(Icons.arrow_back),
 
 
-            await FirebaseAuth.instance.signOut();
+onPressed: () async {
 
 
-            Navigator.pushReplacement(
+await FirebaseAuth.instance.signOut();
 
-              context,
 
-              MaterialPageRoute(
+Navigator.pushReplacement(
 
-                builder: (context) => LoginPage(),
+context,
 
-              ),
+MaterialPageRoute(
 
-            );
+builder: (context)=> LoginPage(),
 
-          },
+),
 
-        ),
+);
 
-      ),
 
+},
 
 
-      body: FutureBuilder<QuerySnapshot>(
+),
 
 
-        future: FirebaseFirestore.instance
+),
 
-            .collection('schedule')
 
-            .where(
-              'teacher',
-              isEqualTo: awaitTeacherName(),
-            )
 
-            .get(),
+body:
 
 
 
-        builder: (context, snapshot) {
+StreamBuilder<QuerySnapshot>(
 
 
-          if(snapshot.connectionState ==
-              ConnectionState.waiting){
+stream:
 
+FirebaseFirestore.instance
 
-            return const Center(
+.collection('users')
 
-              child: CircularProgressIndicator(),
+.where(
 
-            );
+'email',
 
-          }
+isEqualTo: email,
 
+)
 
+.snapshots(),
 
-          if(!snapshot.hasData ||
-              snapshot.data!.docs.isEmpty){
 
 
-            return const Center(
+builder:(context,userSnap){
 
-              child: Text(
-                "Пар нет",
-              ),
 
-            );
 
-          }
+if(!userSnap.hasData){
 
+return const Center(
 
+child:CircularProgressIndicator(),
 
-          return ListView(
+);
 
-            children: snapshot.data!.docs.map((doc){
+}
 
 
-              final data =
-              doc.data()
-              as Map<String,dynamic>;
 
+if(userSnap.data!.docs.isEmpty){
 
 
-              return Card(
+return const Center(
 
-                margin:
-                const EdgeInsets.all(10),
+child:Text(
 
+"Пользователь не найден",
 
-                child: InkWell(
+),
 
+);
 
-                  onTap: (){
 
+}
 
-                    Navigator.push(
 
-                      context,
 
-                      MaterialPageRoute(
+final userData =
 
-                        builder: (context)=>
-                            AttendancePage(),
+userSnap.data!.docs.first.data()
 
-                      ),
+as Map<String,dynamic>;
 
-                    );
 
 
-                  },
+final teacherName =
 
+userData['name'];
 
-                  child: Padding(
 
-                    padding:
-                    const EdgeInsets.all(15),
 
 
-                    child: Column(
+return StreamBuilder<QuerySnapshot>(
 
 
-                      crossAxisAlignment:
-                      CrossAxisAlignment.start,
+stream:
 
+FirebaseFirestore.instance
 
-                      children: [
+.collection('schedule')
 
+.where(
 
-                        Text(
+'teacher',
 
-                          data['subject'] ?? '',
+isEqualTo: teacherName,
 
-                          style:
-                          const TextStyle(
+)
 
-                            fontSize: 22,
+.snapshots(),
 
-                            fontWeight:
-                            FontWeight.bold,
 
-                          ),
 
-                        ),
+builder:(context,scheduleSnap){
 
 
 
-                        Text(
-                          "День: ${data['day']}",
-                        ),
+if(!scheduleSnap.hasData){
 
+return const Center(
 
+child:CircularProgressIndicator(),
 
-                        Text(
-                          "Группа: ${data['group']}",
-                        ),
+);
 
+}
 
 
-                        Text(
-                          "Пара: ${data['lesson']}",
-                        ),
 
+if(scheduleSnap.data!.docs.isEmpty){
 
 
-                        Text(
-                          "Преподаватель: ${data['teacher']}",
-                        ),
+return const Center(
 
+child:Text(
 
+"Пар нет",
 
-                      ],
+),
 
-                    ),
+);
 
-                  ),
 
-                ),
+}
 
-              );
 
 
 
-            }).toList(),
+return ListView.builder(
 
-          );
 
+itemCount:
 
-        },
+scheduleSnap.data!.docs.length,
 
-      ),
 
-    );
 
-  }
+itemBuilder:(context,index){
 
 
 
-  String awaitTeacherName(){
+final data =
 
+scheduleSnap.data!.docs[index].data()
 
-    // временно берем преподавателя
-    // по email из users
+as Map<String,dynamic>;
 
 
-    return "";
 
-  }
+
+return Card(
+
+
+margin:
+
+const EdgeInsets.all(10),
+
+
+
+child:ListTile(
+
+
+
+title:Text(
+
+data['subject'] ?? "",
+
+style:const TextStyle(
+
+fontSize:20,
+
+fontWeight:FontWeight.bold,
+
+),
+
+),
+
+
+
+subtitle:Text(
+
+
+"${data['day']} \n"
+"Группа: ${data['group']} \n"
+"Пара: ${data['lesson']}",
+
+
+),
+
+
+
+trailing:
+
+const Icon(Icons.arrow_forward_ios),
+
+
+
+
+onTap:(){
+
+
+
+Navigator.push(
+
+
+context,
+
+
+MaterialPageRoute(
+
+
+builder:(context)=>
+
+
+AttendancePage(
+
+lesson:data,
+
+),
+
+
+),
+
+
+);
+
+
+
+},
+
+
+
+),
+
+
+
+);
+
+
+
+},
+
+
+
+);
+
+
+
+},
+
+
+
+);
+
+
+
+},
+
+
+
+),
+
+
+
+);
+
+
+}
 
 
 }
