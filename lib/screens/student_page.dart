@@ -1,336 +1,361 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class StudentPage extends StatefulWidget {
+import 'login_page.dart';
+
+class StudentPage extends StatelessWidget {
   const StudentPage({super.key});
 
-  @override
-  State<StudentPage> createState() => _StudentPageState();
-}
+  final Map<String, String> lessonTimes = const {
+    '1': '8:00 - 9:30',
+    '2': '9:40 - 11:10',
+    '3': '11:30 - 13:00',
+    '4': '13:10 - 14:40',
+    '5': '15:00 - 16:30',
+  };
 
-class _StudentPageState extends State<StudentPage> {
-  String? studentEmail;
+  String getLessonTime(Map<String, dynamic> data) {
+    final lesson = data['lesson']?.toString() ?? '';
 
-  @override
-  void initState() {
-    super.initState();
-    studentEmail = FirebaseAuth.instance.currentUser?.email;
+    if (data['time'] != null && data['time'].toString().isNotEmpty) {
+      return data['time'].toString();
+    }
+
+    return lessonTimes[lesson] ?? 'Время не указано';
   }
 
   @override
   Widget build(BuildContext context) {
+    final email = FirebaseAuth.instance.currentUser?.email;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Личный кабинет студента"),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
+        title: const Text("Кабинет студента"),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () async {
+            await FirebaseAuth.instance.signOut();
 
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              children: [
-
-                Card(
-                  elevation: 4,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.grade,
-                          size: 40,
-                          color: Colors.blue),
-                      SizedBox(height: 10),
-                      Text(
-                        "Оценки",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                Card(
-                  elevation: 4,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.check_circle,
-                          size: 40,
-                          color: Colors.green),
-                      SizedBox(height: 10),
-                      Text(
-                        "Посещаемость",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                Card(
-                  elevation: 4,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.schedule,
-                          size: 40,
-                          color: Colors.orange),
-                      SizedBox(height: 10),
-                      Text(
-                        "Расписание",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                Card(
-                  elevation: 4,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.bar_chart,
-                          size: 40,
-                          color: Colors.purple),
-                      SizedBox(height: 10),
-                      Text(
-                        "Успеваемость",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 30),
-
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "📚 Мои оценки",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => LoginPage(),
               ),
-            ),
-
-            const SizedBox(height: 10),
-
-            StreamBuilder<QuerySnapshot>( 
-              stream: FirebaseFirestore.instance
-                  .collection('grades')
-                  .where('student', isEqualTo: studentEmail)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const CircularProgressIndicator();
-                }
-
-                final grades = snapshot.data!.docs;
-
-                if (grades.isEmpty) {
-                  return const Text("Оценок пока нет");
-                }
-
-                return Column(
-                  children: grades.map((grade) {
-                    return Card(
-                      child: ListTile(
-                        leading: const Icon(Icons.grade),
-                        title: Text(
-                          grade['subject'],
-                        ),
-                        trailing: Text(
-                          grade['grade'].toString(),
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-
-            const SizedBox(height: 30),
-
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "✅ Посещаемость",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('attendance')
-                  .where('student', isEqualTo: studentEmail)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const CircularProgressIndicator();
-                }
-
-                final attendance = snapshot.data!.docs;
-
-                if (attendance.isEmpty) {
-                  return const Text(
-                    "Посещаемость пока отсутствует",
-                  );
-                }
-
-                return Column(
-                  children: attendance.map((item) {
-                    final present = item['present'] == true;
-
-                    return Card(
-                      child: ListTile(
-                        leading: Icon(
-                          present
-                              ? Icons.check_circle
-                              : Icons.cancel,
-                          color: present
-                              ? Colors.green
-                              : Colors.red,
-                        ),
-                        title: Text(
-                          present
-                              ? "Присутствовал"
-                              : "Отсутствовал",
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-
-            const SizedBox(height: 30),
-
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "📅 Моё расписание",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('schedule')
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const CircularProgressIndicator();
-                }
-
-                final lessons = snapshot.data!.docs;
-
-                if (lessons.isEmpty) {
-                  return const Text(
-                    "Расписание пока пустое",
-                  );
-                }
-
-                return Column( 
-                  children: lessons.map((lesson) {
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius:
-                            BorderRadius.circular(16),
-                        boxShadow: const [
-                          BoxShadow(
-                            blurRadius: 4,
-                            color: Colors.black12,
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-
-                          Container(
-                            padding:
-                                const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.shade100,
-                              borderRadius:
-                                  BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.schedule,
-                              color: Colors.blue,
-                            ),
-                          ),
-
-                          const SizedBox(width: 15),
-
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                              children: [
-
-                                Text(
-                                  lesson['subject'],
-                                  style: const TextStyle(
-                                    fontWeight:
-                                        FontWeight.bold,
-                                    fontSize: 18,
-                                  ),
-                                ),
-
-                                const SizedBox(height: 5),
-
-                                Text(
-                                  "📅 ${lesson['day']}",
-                                ),
-
-                                Text(
-                                  "📖 Пара ${lesson['lesson']}",
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-          ],
+            );
+          },
         ),
+      ),
+
+      body: FutureBuilder<QuerySnapshot>(
+        future: FirebaseFirestore.instance
+            .collection('users')
+            .where(
+              'email',
+              isEqualTo: email,
+            )
+            .get(),
+
+        builder: (context, userSnapshot) {
+          if (userSnapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+
+          if (!userSnapshot.hasData || userSnapshot.data!.docs.isEmpty) {
+            return const Center(
+              child: Text("Студент не найден"),
+            );
+          }
+
+          final userData =
+              userSnapshot.data!.docs.first.data() as Map<String, dynamic>;
+
+          final studentName = userData['name']?.toString() ?? 'Без имени';
+          final studentGroup = userData['group']?.toString() ?? '';
+          final studentEmail = userData['email']?.toString() ?? '';
+
+          return ListView(
+            padding: const EdgeInsets.all(15),
+            children: [
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(15),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Мой профиль",
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      Text("Имя: $studentName"),
+                      Text("Группа: $studentGroup"),
+                      Text("Email: $studentEmail"),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 15),
+
+              const Text(
+                "Моё расписание",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('schedule')
+                    .where(
+                      'group',
+                      isEqualTo: studentGroup,
+                    )
+                    .snapshots(),
+
+                builder: (context, scheduleSnapshot) {
+                  if (!scheduleSnapshot.hasData) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+
+                  final lessons = scheduleSnapshot.data!.docs;
+
+                  if (lessons.isEmpty) {
+                    return const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(15),
+                        child: Text("Расписание не найдено"),
+                      ),
+                    );
+                  }
+
+                  return Column(
+                    children: lessons.map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+
+                      return Card(
+                        child: ListTile(
+                          title: Text(
+                            data['subject']?.toString() ?? '',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          subtitle: Text(
+                            "День: ${data['day'] ?? ''}\n"
+                            "Пара: ${data['lesson'] ?? ''}\n"
+                            "Время: ${getLessonTime(data)}\n"
+                            "Преподаватель: ${data['teacher'] ?? ''}",
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 20),
+
+              const Text(
+                "Мои оценки",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('grades')
+                    .where(
+                      'studentName',
+                      isEqualTo: studentName,
+                    )
+                    .snapshots(),
+
+                builder: (context, gradesSnapshot) {
+                  if (!gradesSnapshot.hasData) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+
+                  final grades = gradesSnapshot.data!.docs;
+
+                  if (grades.isEmpty) {
+                    return const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(15),
+                        child: Text("Оценок пока нет"),
+                      ),
+                    );
+                  }
+
+                  return Column(
+                    children: grades.map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+
+                      return Card(
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            child: Text(
+                              data['grade']?.toString() ?? '',
+                            ),
+                          ),
+                          title: Text(
+                            data['subject']?.toString() ?? '',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          subtitle: Text(
+                            "Дата: ${data['date'] ?? ''}\n"
+                            "День: ${data['day'] ?? ''}\n"
+                            "Пара: ${data['lesson'] ?? ''}\n"
+                            "Преподаватель: ${data['teacher'] ?? ''}",
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 20),
+
+              const Text(
+                "Моя посещаемость",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('attendance')
+                    .where(
+                      'studentName',
+                      isEqualTo: studentName,
+                    )
+                    .snapshots(),
+
+                builder: (context, attendanceSnapshot) {
+                  if (!attendanceSnapshot.hasData) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+
+                  final attendance = attendanceSnapshot.data!.docs;
+
+                  if (attendance.isEmpty) {
+                    return const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(15),
+                        child: Text("Посещаемости пока нет"),
+                      ),
+                    );
+                  }
+
+                  int presentCount = 0;
+                  int absentCount = 0;
+
+                  for (final doc in attendance) {
+                    final data = doc.data() as Map<String, dynamic>;
+
+                    if (data['present'] == true) {
+                      presentCount++;
+                    } else {
+                      absentCount++;
+                    }
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Card(
+                        color: Colors.grey.shade200,
+                        child: Padding(
+                          padding: const EdgeInsets.all(15),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("Всего занятий: ${attendance.length}"),
+                              Text("Был: $presentCount"),
+                              Text("Не был: $absentCount"),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      Column(
+                        children: attendance.map((doc) {
+                          final data = doc.data() as Map<String, dynamic>;
+
+                          final present = data['present'] == true;
+
+                          return Card(
+                            child: ListTile(
+                              leading: Icon(
+                                present
+                                    ? Icons.check_circle
+                                    : Icons.cancel,
+                                color: present
+                                    ? Colors.green
+                                    : Colors.red,
+                              ),
+                              title: Text(
+                                data['subject']?.toString() ?? '',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              subtitle: Text(
+                                "Дата: ${data['date'] ?? ''}\n"
+                                "День: ${data['day'] ?? ''}\n"
+                                "Пара: ${data['lesson'] ?? ''}\n"
+                                "Преподаватель: ${data['teacher'] ?? ''}",
+                              ),
+                              trailing: Text(
+                                present ? "Был" : "Не был",
+                                style: TextStyle(
+                                  color: present
+                                      ? Colors.green
+                                      : Colors.red,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          );
+        },
       ),
     );
   }

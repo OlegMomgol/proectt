@@ -41,16 +41,58 @@ class _AttendancePageState extends State<AttendancePage> {
         ".${now.year}";
   }
 
+  Future<List<QueryDocumentSnapshot>> loadStudents() async {
+    final groupName = widget.lesson['group'].toString();
+
+    final firstTry = await FirebaseFirestore.instance
+        .collection('groups')
+        .doc(groupName)
+        .collection('students')
+        .get();
+
+    if (firstTry.docs.isNotEmpty) {
+      return firstTry.docs;
+    }
+
+    final groupQuery = await FirebaseFirestore.instance
+        .collection('groups')
+        .where('name', isEqualTo: groupName)
+        .get();
+
+    if (groupQuery.docs.isNotEmpty) {
+      final groupId = groupQuery.docs.first.id;
+
+      final secondTry = await FirebaseFirestore.instance
+          .collection('groups')
+          .doc(groupId)
+          .collection('students')
+          .get();
+
+      if (secondTry.docs.isNotEmpty) {
+        return secondTry.docs;
+      }
+    }
+
+    final usersTry = await FirebaseFirestore.instance
+        .collection('users')
+        .where('group', isEqualTo: groupName)
+        .get();
+
+    return usersTry.docs;
+  }
+
   Future<void> saveData(List<QueryDocumentSnapshot> students) async {
     for (final doc in students) {
       final student = doc.data() as Map<String, dynamic>;
 
-      final studentName = student['name'].toString();
+      final studentName =
+          student['name']?.toString() ?? student['email']?.toString() ?? 'Без имени';
 
       final isPresent = attendance[studentName] ?? false;
       final grade = grades[studentName];
 
       await FirebaseFirestore.instance.collection('attendance').add({
+        'studentId': doc.id,
         'studentName': studentName,
         'group': widget.lesson['group'],
         'subject': widget.lesson['subject'],
@@ -64,6 +106,7 @@ class _AttendancePageState extends State<AttendancePage> {
 
       if (grade != null && grade.isNotEmpty) {
         await FirebaseFirestore.instance.collection('grades').add({
+          'studentId': doc.id,
           'studentName': studentName,
           'group': widget.lesson['group'],
           'subject': widget.lesson['subject'],
@@ -90,8 +133,6 @@ class _AttendancePageState extends State<AttendancePage> {
 
   @override
   Widget build(BuildContext context) {
-    final groupName = widget.lesson['group'].toString();
-
     return Scaffold(
       appBar: AppBar(
         title: const Text("Посещаемость"),
@@ -117,61 +158,58 @@ class _AttendancePageState extends State<AttendancePage> {
                 const SizedBox(height: 8),
 
                 Text("Группа: ${widget.lesson['group']}"),
-
                 Text("День: ${widget.lesson['day']}"),
-
                 Text("Пара: ${widget.lesson['lesson']}"),
-
                 Text("Время: $lessonTime"),
-
                 Text("Преподаватель: ${widget.lesson['teacher']}"),
-
                 Text("Дата отметки: $today"),
               ],
             ),
           ),
 
           Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('groups')
-                  .doc(groupName)
-                  .collection('students')
-                  .snapshots(),
+            child: FutureBuilder<List<QueryDocumentSnapshot>>(
+              future: loadStudents(),
 
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
                     child: CircularProgressIndicator(),
                   );
-                  }
+                }
 
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return const Center(
                     child: Text("Студенты не найдены"),
                   );
                 }
 
-                final students = snapshot.data!.docs;
+                final students = snapshot.data!;
 
                 return Column(
                   children: [
                     Expanded(
                       child: ListView.builder(
                         itemCount: students.length,
+
                         itemBuilder: (context, index) {
                           final student =
                               students[index].data() as Map<String, dynamic>;
 
                           final studentName =
-                              student['name']?.toString() ?? 'Без имени';
+                              student['name']?.toString() ??
+                              student['email']?.toString() ??
+                              'Без имени';
 
                           return Card(
                             margin: const EdgeInsets.all(8),
+
                             child: Padding(
                               padding: const EdgeInsets.all(10),
+
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
+
                                 children: [
                                   Text(
                                     studentName,
@@ -191,8 +229,7 @@ class _AttendancePageState extends State<AttendancePage> {
 
                                       ChoiceChip(
                                         label: const Text("Был"),
-                                        selected:
-                                            attendance[studentName] == true,
+                                        selected: attendance[studentName] == true,
                                         onSelected: (_) {
                                           setState(() {
                                             attendance[studentName] = true;
@@ -204,8 +241,7 @@ class _AttendancePageState extends State<AttendancePage> {
 
                                       ChoiceChip(
                                         label: const Text("Не был"),
-                                        selected:
-                                            attendance[studentName] == false,
+                                        selected: attendance[studentName] == false,
                                         onSelected: (_) {
                                           setState(() {
                                             attendance[studentName] = false;
@@ -216,7 +252,6 @@ class _AttendancePageState extends State<AttendancePage> {
                                   ),
 
                                   const SizedBox(height: 10),
-
                                   DropdownButton<String>(
                                     hint: const Text("Оценка"),
                                     value: grades[studentName],
@@ -255,8 +290,10 @@ class _AttendancePageState extends State<AttendancePage> {
 
                     Padding(
                       padding: const EdgeInsets.all(12),
+
                       child: SizedBox(
                         width: double.infinity,
+
                         child: ElevatedButton(
                           onPressed: () => saveData(students),
                           child: const Text("Сохранить"),
