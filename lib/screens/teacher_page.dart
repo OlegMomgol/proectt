@@ -248,7 +248,7 @@ subtitle:Text(
 
 "${data['day']} \n"
 "Группа: ${data['group']} \n"
-"Пара: ${data['lesson']}",
+"Пара: ${data['lesson']}   ${data['time'] ?? 'Время не указано'}",
 
 
 ),
