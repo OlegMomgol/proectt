@@ -1,178 +1,265 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 
 class AttendancePage extends StatefulWidget {
 
-  final String group;
-  final String subject;
+  final Map<String, dynamic> lesson;
 
   const AttendancePage({
     super.key,
-    required this.group,
-    required this.subject,
+    required this.lesson,
   });
+
 
   @override
   State<AttendancePage> createState() => _AttendancePageState();
+
 }
+
+
+
 class _AttendancePageState extends State<AttendancePage> {
-  String selectedGroup = '';
 
-  Future<void> markAttendance(
-    String studentEmail,
-    bool present,
-  ) async {
-    await FirebaseFirestore.instance
-        .collection('attendance')
-        .add({
-      'student': studentEmail,
-      'group': selectedGroup,
-      'date': DateTime.now().toString(),
-      'present': present,
-    });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          present
-              ? 'Посещаемость отмечена'
-              : 'Студент отсутствует',
-        ),
-      ),
-    );
-  }
+  Map<String, bool> attendance = {};
+
+
 
   @override
   Widget build(BuildContext context) {
+
+
     return Scaffold(
+
       appBar: AppBar(
-        title: const Text('Посещаемость'),
+
+        title: const Text("Посещаемость"),
+
       ),
+
+
+
       body: Column(
+
         children: [
-          StreamBuilder(
-            stream: FirebaseFirestore.instance
-                .collection('groups')
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return const SizedBox();
-              }
 
-              final groups = snapshot.data!.docs;
 
-              return Padding(
-                padding: const EdgeInsets.all(12),
-                child: DropdownButton<String>(
-                  value: selectedGroup.isEmpty
-                      ? null
-                      : selectedGroup,
-                  hint: const Text('Выберите группу'),
-                  isExpanded: true,
-                  items: groups.map((group) {
-                    return DropdownMenuItem<String>(
-                      value: group['name'],
-                      child: Text(group['name']),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedGroup = value!;
-                    });
-                  },
+          Padding(
+
+            padding: const EdgeInsets.all(16),
+
+            child: Column(
+
+              crossAxisAlignment: CrossAxisAlignment.start,
+
+              children: [
+
+                Text(
+                  widget.lesson['subject'] ?? '',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              );
-            },
+
+
+                Text(
+                  "Группа: ${widget.lesson['group'] ?? ''}",
+                ),
+
+
+                Text(
+                  "Пара: ${widget.lesson['lesson'] ?? ''}",
+                ),
+
+
+                Text(
+                  "Преподаватель: ${widget.lesson['teacher'] ?? ''}",
+                ),
+
+
+              ],
+
+            ),
+
           ),
+
+
+
+          const Divider(),
+
+
 
           Expanded(
-            child: selectedGroup.isEmpty
-                ? const Center(
-                    child: Text(
-                      'Выберите группу',
-                    ),
+
+            child: StreamBuilder<QuerySnapshot>(
+
+
+              stream: FirebaseFirestore.instance
+                  .collection('users')
+                  .where(
+                    'group',
+                    isEqualTo: widget.lesson['group'],
                   )
-                : StreamBuilder(
-                    stream: FirebaseFirestore.instance
-                        .collection('users')
-                        .where('role',
-                            isEqualTo: 'student')
-                        .where('group',
-                            isEqualTo: selectedGroup)
-                        .snapshots(),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) {
-                        return const Center(
-                          child:
-                              CircularProgressIndicator(),
-                        );
-                      }
+                  .snapshots(),
 
-                      final students =
-                          snapshot.data!.docs;
 
-                      if (students.isEmpty) {
-                        return const Center(
-                          child: Text(
-                            'Студентов нет',
-                          ),
-                        );
-                      }
+              builder: (context, snapshot) {
 
-                      return ListView.builder(
-                        itemCount: students.length,
-                        itemBuilder: (context, index) {
-                          final student =
-                              students[index];
 
-                          return Card(
-                            margin:
-                                const EdgeInsets.all(8),
-                            child: ListTile(
-                              title:
-                                  Text(student['email']),
-                              subtitle: Text(
-                                selectedGroup,
-                              ),
-                              trailing: Row(
-                                mainAxisSize:
-                                    MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.check,
-                                      color: Colors.green,
-                                    ),
-                                    onPressed: () {
-                                      markAttendance(
-                                        student['email'],
-                                        true,
-                                      );
-                                    },
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.close,
-                                      color: Colors.red,
-                                    ),
-                                    onPressed: () {
-                                      markAttendance(
-                                        student['email'],
-                                        false,
-                                      );
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
+                if(!snapshot.hasData){
+
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+
+                }
+
+
+                var students = snapshot.data!.docs;
+
+
+
+                if(students.isEmpty){
+
+                  return const Center(
+                    child: Text(
+                      "Студенты не найдены",
+                    ),
+                  );
+
+                }
+
+
+
+                return ListView.builder(
+
+
+                  itemCount: students.length,
+
+
+                  itemBuilder: (context,index){
+
+
+                    var student = students[index].data()
+                    as Map<String,dynamic>;
+
+
+                    String name =
+                        student['name'] ?? 'Без имени';
+
+
+
+                    return ListTile(
+
+
+                      title: Text(name),
+
+
+                      trailing: Switch(
+
+
+                        value: attendance[name] ?? false,
+
+
+                        onChanged: (value){
+
+
+                          setState((){
+
+
+                            attendance[name] = value;
+
+
+                          });
+
+
                         },
-                      );
-                    },
-                  ),
+
+
+                      ),
+
+
+                      subtitle: Text(
+
+                        attendance[name] == true
+                            ? "Был"
+                            : "Не был",
+
+                      ),
+
+
+                    );
+
+
+                  },
+
+
+                );
+
+
+
+              },
+
+            ),
+
           ),
+
+
+
+
+          ElevatedButton(
+
+
+            onPressed: () async {
+
+
+              await FirebaseFirestore.instance
+                  .collection('attendance')
+                  .add({
+
+                'subject': widget.lesson['subject'],
+
+                'teacher': widget.lesson['teacher'],
+
+                'group': widget.lesson['group'],
+
+                'date': DateTime.now(),
+
+
+                'students': attendance,
+
+
+              });
+
+
+
+              Navigator.pop(context);
+
+
+            },
+
+
+            child: const Text(
+              "Сохранить",
+            ),
+
+
+          ),
+
+
+          const SizedBox(height:20),
+
+
         ],
+
+
       ),
+
+
     );
+
   }
+
 }

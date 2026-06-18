@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'login_page.dart';
+import 'attendance_page.dart';
+
 
 class TeacherPage extends StatelessWidget {
 
@@ -16,11 +19,44 @@ class TeacherPage extends StatelessWidget {
         FirebaseAuth.instance.currentUser?.email;
 
 
-
     return Scaffold(
 
       appBar: AppBar(
-        title: const Text("Мои пары"),
+
+        title: const Text(
+          "Мои пары",
+        ),
+
+
+        leading: IconButton(
+
+          icon: const Icon(
+            Icons.arrow_back,
+          ),
+
+
+          onPressed: () async {
+
+
+            await FirebaseAuth.instance.signOut();
+
+
+            Navigator.pushReplacement(
+
+              context,
+
+              MaterialPageRoute(
+
+                builder: (context) => LoginPage(),
+
+              ),
+
+            );
+
+          },
+
+        ),
+
       ),
 
 
@@ -29,161 +65,186 @@ class TeacherPage extends StatelessWidget {
 
 
         future: FirebaseFirestore.instance
-            .collection('users')
+
+            .collection('schedule')
+
             .where(
-              'email',
-              isEqualTo: email,
+              'teacher',
+              isEqualTo: awaitTeacherName(),
             )
+
             .get(),
 
 
 
-        builder: (context, userSnap) {
+        builder: (context, snapshot) {
 
 
-
-          if(userSnap.connectionState ==
+          if(snapshot.connectionState ==
               ConnectionState.waiting){
 
+
             return const Center(
+
               child: CircularProgressIndicator(),
+
             );
 
           }
 
 
 
-          if(!userSnap.hasData ||
-              userSnap.data!.docs.isEmpty){
+          if(!snapshot.hasData ||
+              snapshot.data!.docs.isEmpty){
 
 
             return const Center(
-              child: Text(
-                "Преподаватель не найден",
-                style: TextStyle(fontSize: 20),
-              ),
-            );
 
+              child: Text(
+                "Пар нет",
+              ),
+
+            );
 
           }
 
 
 
-          final user =
-          userSnap.data!.docs.first.data()
-          as Map<String,dynamic>;
+          return ListView(
+
+            children: snapshot.data!.docs.map((doc){
+
+
+              final data =
+              doc.data()
+              as Map<String,dynamic>;
 
 
 
-          final teacherName =
-          user['name'];
+              return Card(
+
+                margin:
+                const EdgeInsets.all(10),
 
 
+                child: InkWell(
 
 
-          return StreamBuilder<QuerySnapshot>(
+                  onTap: (){
 
 
-            stream: FirebaseFirestore.instance
-                .collection('schedule')
-                .where(
-                'teacher',
-                isEqualTo: teacherName
-            )
-                .snapshots(),
+                    Navigator.push(
+
+                      context,
+
+                      MaterialPageRoute(
+
+                        builder: (context)=>
+                            AttendancePage(),
+
+                      ),
+
+                    );
 
 
+                  },
 
 
-            builder:(context,snapshot){
+                  child: Padding(
+
+                    padding:
+                    const EdgeInsets.all(15),
 
 
-
-              if(!snapshot.hasData){
-
-                return const Center(
-                  child: CircularProgressIndicator(),
-                );
-
-              }
+                    child: Column(
 
 
-
-              if(snapshot.data!.docs.isEmpty){
-
-                return const Center(
-                  child: Text(
-                    "Нет пар",
-                    style: TextStyle(fontSize: 20),
-                  ),
-                );
-
-              }
+                      crossAxisAlignment:
+                      CrossAxisAlignment.start,
 
 
-
-              return ListView(
-
-
-                children:
-
-                snapshot.data!.docs.map((doc){
+                      children: [
 
 
-                  final data =
-                  doc.data()
-                  as Map<String,dynamic>;
+                        Text(
 
+                          data['subject'] ?? '',
 
+                          style:
+                          const TextStyle(
 
-                  return Card(
+                            fontSize: 22,
 
-                    child: ListTile(
+                            fontWeight:
+                            FontWeight.bold,
 
-                      title: Text(
-                        data['subject'],
-                        style:
-                        const TextStyle(
-                          fontSize:22,
-                          fontWeight:
-                          FontWeight.bold,
+                          ),
+
                         ),
-                      ),
 
 
-                      subtitle: Text(
 
-                        "День: ${data['day']}\n"
-                        "Группа: ${data['group']}\n"
-                        "Пара: ${data['lesson']}\n"
-                        "Преподаватель: ${data['teacher']}",
+                        Text(
+                          "День: ${data['day']}",
+                        ),
 
-                      ),
+
+
+                        Text(
+                          "Группа: ${data['group']}",
+                        ),
+
+
+
+                        Text(
+                          "Пара: ${data['lesson']}",
+                        ),
+
+
+
+                        Text(
+                          "Преподаватель: ${data['teacher']}",
+                        ),
+
+
+
+                      ],
 
                     ),
 
-                  );
+                  ),
 
-
-                }).toList(),
-
+                ),
 
               );
 
 
-            },
+
+            }).toList(),
 
           );
 
 
-
         },
-
 
       ),
 
     );
 
   }
+
+
+
+  String awaitTeacherName(){
+
+
+    // временно берем преподавателя
+    // по email из users
+
+
+    return "";
+
+  }
+
 
 }
