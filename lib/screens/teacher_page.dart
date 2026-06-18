@@ -4,33 +4,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 
 class TeacherPage extends StatelessWidget {
+
   const TeacherPage({super.key});
-
-
-  Future<String?> getTeacherName() async {
-
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (user == null) return null;
-
-
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .get();
-
-
-    if (!doc.exists) return null;
-
-
-    return doc.data()?['name'];
-
-  }
-
 
 
   @override
   Widget build(BuildContext context) {
+
+
+    final email =
+        FirebaseAuth.instance.currentUser?.email;
+
 
 
     return Scaffold(
@@ -40,15 +24,26 @@ class TeacherPage extends StatelessWidget {
       ),
 
 
-      body: FutureBuilder<String?>(
 
-        future: getTeacherName(),
-
-
-        builder: (context, teacherSnapshot) {
+      body: FutureBuilder<QuerySnapshot>(
 
 
-          if (!teacherSnapshot.hasData) {
+        future: FirebaseFirestore.instance
+            .collection('users')
+            .where(
+              'email',
+              isEqualTo: email,
+            )
+            .get(),
+
+
+
+        builder: (context, userSnap) {
+
+
+
+          if(userSnap.connectionState ==
+              ConnectionState.waiting){
 
             return const Center(
               child: CircularProgressIndicator(),
@@ -58,7 +53,31 @@ class TeacherPage extends StatelessWidget {
 
 
 
-          final teacherName = teacherSnapshot.data;
+          if(!userSnap.hasData ||
+              userSnap.data!.docs.isEmpty){
+
+
+            return const Center(
+              child: Text(
+                "Преподаватель не найден",
+                style: TextStyle(fontSize: 20),
+              ),
+            );
+
+
+          }
+
+
+
+          final user =
+          userSnap.data!.docs.first.data()
+          as Map<String,dynamic>;
+
+
+
+          final teacherName =
+          user['name'];
+
 
 
 
@@ -68,18 +87,19 @@ class TeacherPage extends StatelessWidget {
             stream: FirebaseFirestore.instance
                 .collection('schedule')
                 .where(
-                  'teacher',
-                  isEqualTo: teacherName,
-                )
+                'teacher',
+                isEqualTo: teacherName
+            )
                 .snapshots(),
 
 
 
-            builder: (context, snapshot) {
+
+            builder:(context,snapshot){
 
 
 
-              if (!snapshot.hasData) {
+              if(!snapshot.hasData){
 
                 return const Center(
                   child: CircularProgressIndicator(),
@@ -89,14 +109,12 @@ class TeacherPage extends StatelessWidget {
 
 
 
-              if (snapshot.data!.docs.isEmpty) {
+              if(snapshot.data!.docs.isEmpty){
 
                 return const Center(
                   child: Text(
                     "Нет пар",
-                    style: TextStyle(
-                      fontSize: 20,
-                    ),
+                    style: TextStyle(fontSize: 20),
                   ),
                 );
 
@@ -104,83 +122,41 @@ class TeacherPage extends StatelessWidget {
 
 
 
-              return ListView.builder(
+              return ListView(
 
 
-                itemCount: snapshot.data!.docs.length,
+                children:
 
-
-                itemBuilder: (context, index) {
+                snapshot.data!.docs.map((doc){
 
 
                   final data =
-                  snapshot.data!.docs[index].data()
-                  as Map<String, dynamic>;
+                  doc.data()
+                  as Map<String,dynamic>;
 
 
 
                   return Card(
 
-                    margin: const EdgeInsets.all(10),
+                    child: ListTile(
+
+                      title: Text(
+                        data['subject'],
+                        style:
+                        const TextStyle(
+                          fontSize:22,
+                          fontWeight:
+                          FontWeight.bold,
+                        ),
+                      ),
 
 
-                    child: Padding(
+                      subtitle: Text(
 
-                      padding: const EdgeInsets.all(15),
-
-
-                      child: Column(
-
-                        crossAxisAlignment:
-                        CrossAxisAlignment.start,
-
-
-                        children: [
-
-
-                          Text(
-
-                            data['subject'] ?? '',
-
-                            style: const TextStyle(
-
-                              fontSize: 22,
-
-                              fontWeight:
-                              FontWeight.bold,
-
-                            ),
-
-                          ),
-
-
-
-                          const SizedBox(height: 10),
-
-
-
-                          Text(
-                            "День: ${data['day']}",
-                          ),
-
-
-                          Text(
-                            "Группа: ${data['group']}",
-                          ),
-
-
-                          Text(
-                            "Пара: ${data['lesson']}",
-                          ),
-
-
-                          Text(
-                            "Преподаватель: ${data['teacher']}",
-                          ),
-
-
-
-                        ],
+                        "День: ${data['day']}\n"
+                        "Группа: ${data['group']}\n"
+                        "Пара: ${data['lesson']}\n"
+                        "Преподаватель: ${data['teacher']}",
 
                       ),
 
@@ -189,7 +165,8 @@ class TeacherPage extends StatelessWidget {
                   );
 
 
-                },
+                }).toList(),
+
 
               );
 
@@ -199,12 +176,13 @@ class TeacherPage extends StatelessWidget {
           );
 
 
+
         },
+
 
       ),
 
     );
-
 
   }
 
