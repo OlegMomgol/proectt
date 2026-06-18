@@ -88,7 +88,7 @@ InkWell(
       context,
       MaterialPageRoute(
         builder: (context) =>
-            const SchedulePage(),
+          SchedulePage(),
       ),
     );
   },
