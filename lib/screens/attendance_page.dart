@@ -4,262 +4,384 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AttendancePage extends StatefulWidget {
 
-  final Map<String, dynamic> lesson;
 
-  const AttendancePage({
-    super.key,
-    required this.lesson,
-  });
+final Map<String,dynamic> lesson;
 
 
-  @override
-  State<AttendancePage> createState() => _AttendancePageState();
+const AttendancePage({
+
+super.key,
+
+required this.lesson,
+
+});
+
+
+
+@override
+State<AttendancePage> createState()=>_AttendancePageState();
+
 
 }
 
 
 
-class _AttendancePageState extends State<AttendancePage> {
+class _AttendancePageState extends State<AttendancePage>{
 
 
-  Map<String, bool> attendance = {};
+Map<String,bool> attendance = {};
 
+Map<String,String> grades = {};
 
 
-  @override
-  Widget build(BuildContext context) {
 
+@override
+Widget build(BuildContext context){
 
-    return Scaffold(
 
-      appBar: AppBar(
+return Scaffold(
 
-        title: const Text("Посещаемость"),
 
-      ),
+appBar: AppBar(
 
+title: const Text("Посещаемость"),
 
+),
 
-      body: Column(
 
-        children: [
 
+body: Column(
 
-          Padding(
 
-            padding: const EdgeInsets.all(16),
+children: [
 
-            child: Column(
 
-              crossAxisAlignment: CrossAxisAlignment.start,
 
-              children: [
+Card(
 
-                Text(
-                  widget.lesson['subject'] ?? '',
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+margin: const EdgeInsets.all(10),
 
 
-                Text(
-                  "Группа: ${widget.lesson['group'] ?? ''}",
-                ),
+child: ListTile(
 
 
-                Text(
-                  "Пара: ${widget.lesson['lesson'] ?? ''}",
-                ),
+title: Text(
 
+widget.lesson['subject'] ?? '',
 
-                Text(
-                  "Преподаватель: ${widget.lesson['teacher'] ?? ''}",
-                ),
+style: const TextStyle(
 
+fontSize:20,
 
-              ],
+fontWeight:FontWeight.bold,
 
-            ),
+),
 
-          ),
+),
 
 
 
-          const Divider(),
+subtitle: Text(
 
+"Группа: ${widget.lesson['group']}\n"
+"Пара: ${widget.lesson['lesson']}  "
+"${widget.lesson['time'] ?? ''}\n"
+"Преподаватель: ${widget.lesson['teacher']}",
 
 
-          Expanded(
+),
 
-            child: StreamBuilder<QuerySnapshot>(
 
 
-              stream: FirebaseFirestore.instance
-                  .collection('users')
-                  .where(
-                    'group',
-                    isEqualTo: widget.lesson['group'],
-                  )
-                  .snapshots(),
+),
 
 
-              builder: (context, snapshot) {
+),
 
 
-                if(!snapshot.hasData){
 
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
 
-                }
+Expanded(
 
 
-                var students = snapshot.data!.docs;
+child:
 
+StreamBuilder<QuerySnapshot>(
 
 
-                if(students.isEmpty){
+stream:
 
-                  return const Center(
-                    child: Text(
-                      "Студенты не найдены",
-                    ),
-                  );
+FirebaseFirestore.instance
 
-                }
+.collection('users')
 
+.where(
 
+'group',
 
-                return ListView.builder(
+isEqualTo:
 
+widget.lesson['group']
 
-                  itemCount: students.length,
+)
 
+.snapshots(),
 
-                  itemBuilder: (context,index){
 
 
-                    var student = students[index].data()
-                    as Map<String,dynamic>;
+builder:(context,snapshot){
 
 
-                    String name =
-                        student['name'] ?? 'Без имени';
 
+if(!snapshot.hasData){
 
+return const Center(
 
-                    return ListTile(
+child:CircularProgressIndicator(),
 
+);
 
-                      title: Text(name),
+}
 
 
-                      trailing: Switch(
 
+return ListView.builder(
 
-                        value: attendance[name] ?? false,
 
+itemCount:
 
-                        onChanged: (value){
+snapshot.data!.docs.length,
 
 
-                          setState((){
 
+itemBuilder:(context,index){
 
-                            attendance[name] = value;
 
 
-                          });
+var student =
 
+snapshot.data!.docs[index].data()
 
-                        },
+as Map<String,dynamic>;
 
 
-                      ),
 
+String name = student['name'];
 
-                      subtitle: Text(
 
-                        attendance[name] == true
-                            ? "Был"
-                            : "Не был",
 
-                      ),
+return ListTile(
 
 
-                    );
 
+title:Text(name),
 
-                  },
 
 
-                );
+subtitle:
 
+Column(
 
+crossAxisAlignment:
 
-              },
+CrossAxisAlignment.start,
 
-            ),
 
-          ),
+children:[
 
 
+Text(
 
+attendance[name]==true
 
-          ElevatedButton(
+?"Был"
 
+:"Не был"
 
-            onPressed: () async {
+),
 
 
-              await FirebaseFirestore.instance
-                  .collection('attendance')
-                  .add({
 
-                'subject': widget.lesson['subject'],
+SizedBox(
 
-                'teacher': widget.lesson['teacher'],
+width:120,
 
-                'group': widget.lesson['group'],
+child:DropdownButton<String>(
 
-                'date': DateTime.now(),
+hint: const Text("Оценка"),
 
+value: grades[name],
 
-                'students': attendance,
 
+items: const [
 
-              });
+DropdownMenuItem(
+value:"5",
+child:Text("5"),
+),
 
+DropdownMenuItem(
+value:"4",
+child:Text("4"),
+),
 
+DropdownMenuItem(
+value:"3",
+child:Text("3"),
+),
 
-              Navigator.pop(context);
+DropdownMenuItem(
+value:"2",
+child:Text("2"),
+),
 
+],
 
-            },
 
+onChanged:(value){
 
-            child: const Text(
-              "Сохранить",
-            ),
 
+setState((){
 
-          ),
 
+grades[name] = value!;
 
-          const SizedBox(height:20),
 
+});
 
-        ],
 
+},
 
-      ),
 
+)
 
-    );
 
-  }
+),
+
+
+],
+
+
+),
+
+
+
+
+trailing:
+
+Switch(
+
+
+value:
+
+attendance[name] ?? false,
+
+
+
+onChanged:(value){
+
+
+
+setState((){
+
+
+attendance[name]=value;
+
+
+
+});
+
+
+},
+
+
+
+),
+
+
+
+);
+
+
+
+},
+
+
+
+);
+
+
+
+},
+
+
+
+),
+
+
+
+),
+
+
+
+ElevatedButton(
+
+
+onPressed:(){
+
+
+print(attendance);
+
+print(grades);
+
+
+
+ScaffoldMessenger.of(context)
+
+.showSnackBar(
+
+const SnackBar(
+
+content:Text(
+
+"Сохранено"
+
+),
+
+),
+
+);
+
+
+
+},
+
+
+
+child:
+
+const Text("Сохранить"),
+
+
+
+),
+
+
+
+
+],
+
+
+
+),
+
+
+
+);
+
+
+
+}
+
 
 }
