@@ -25,6 +25,42 @@ class StudentPage extends StatelessWidget {
     return lessonTimes[lesson] ?? 'Время не указано';
   }
 
+  double calculateAverage(List<QueryDocumentSnapshot> grades) {
+    if (grades.isEmpty) return 0;
+
+    double sum = 0;
+    int count = 0;
+
+    for (final doc in grades) {
+      final data = doc.data() as Map<String, dynamic>;
+      final gradeText = data['grade']?.toString() ?? '';
+      final grade = double.tryParse(gradeText);
+
+      if (grade != null) {
+        sum += grade;
+        count++;
+      }
+    }
+
+    if (count == 0) return 0;
+
+    return sum / count;
+  }
+
+  int countGrade(List<QueryDocumentSnapshot> grades, String value) {
+    int count = 0;
+
+    for (final doc in grades) {
+      final data = doc.data() as Map<String, dynamic>;
+
+      if (data['grade']?.toString() == value) {
+        count++;
+      }
+    }
+
+    return count;
+  }
+
   @override
   Widget build(BuildContext context) {
     final email = FirebaseAuth.instance.currentUser?.email;
@@ -110,7 +146,7 @@ class StudentPage extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                ),
+                  ),
               ),
 
               const SizedBox(height: 10),
@@ -206,32 +242,80 @@ class StudentPage extends StatelessWidget {
                     );
                   }
 
-                  return Column(
-                    children: grades.map((doc) {
-                      final data = doc.data() as Map<String, dynamic>;
+                  final average = calculateAverage(grades);
+                  final fiveCount = countGrade(grades, '5');
+                  final fourCount = countGrade(grades, '4');
+                  final threeCount = countGrade(grades, '3');
+                  final twoCount = countGrade(grades, '2');
 
-                      return Card(
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            child: Text(
-                              data['grade']?.toString() ?? '',
-                            ),
-                          ),
-                          title: Text(
-                            data['subject']?.toString() ?? '',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          subtitle: Text(
-                            "Дата: ${data['date'] ?? ''}\n"
-                            "День: ${data['day'] ?? ''}\n"
-                            "Пара: ${data['lesson'] ?? ''}\n"
-                            "Преподаватель: ${data['teacher'] ?? ''}",
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Card(
+                        color: Colors.blue.shade50,
+                        child: Padding(
+                          padding: const EdgeInsets.all(15),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Статистика оценок",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+
+                              const SizedBox(height: 8),
+
+                              Text(
+                                "Средний балл: ${average.toStringAsFixed(2)}",
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+
+                              Text("Всего оценок: ${grades.length}"),
+                              Text("Пятёрок: $fiveCount"),
+                              Text("Четвёрок: $fourCount"),
+                              Text("Троек: $threeCount"),
+                              Text("Двоек: $twoCount"),
+                            ],
                           ),
                         ),
-                      );
-                    }).toList(),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      Column(
+                        children: grades.map((doc) {
+                          final data = doc.data() as Map<String, dynamic>;
+
+                          return Card(
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                child: Text(
+                                  data['grade']?.toString() ?? '',
+                                ),
+                              ),
+                              title: Text(
+                                data['subject']?.toString() ?? '',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              subtitle: Text(
+                                "Дата: ${data['date'] ?? ''}\n"
+                                "День: ${data['day'] ?? ''}\n"
+                                "Пара: ${data['lesson'] ?? ''}\n"
+                                "Преподаватель: ${data['teacher'] ?? ''}",
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
                   );
                 },
               ),
@@ -288,16 +372,38 @@ class StudentPage extends StatelessWidget {
                     }
                   }
 
+                  final percent = attendance.isEmpty
+                      ? 0
+                      : (presentCount / attendance.length * 100);
+
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Card(
-                        color: Colors.grey.shade200,
+                        color: Colors.green.shade50,
                         child: Padding(
                           padding: const EdgeInsets.all(15),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              const Text(
+                                "Статистика посещаемости",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+
+                              const SizedBox(height: 8),
+
+                              Text(
+                                "Посещаемость: ${percent.toStringAsFixed(1)}%",
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+
                               Text("Всего занятий: ${attendance.length}"),
                               Text("Был: $presentCount"),
                               Text("Не был: $absentCount"),
