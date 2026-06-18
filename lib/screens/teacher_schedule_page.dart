@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TeacherSchedulePage extends StatelessWidget {
-
   final String teacherName;
 
   const TeacherSchedulePage({
@@ -10,19 +9,14 @@ class TeacherSchedulePage extends StatelessWidget {
     required this.teacherName,
   });
 
-
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-
       appBar: AppBar(
-        title: const Text('Мои пары'),
+        title: const Text("Мои пары"),
       ),
 
-
       body: StreamBuilder<QuerySnapshot>(
-
         stream: FirebaseFirestore.instance
             .collection('schedule')
             .where(
@@ -31,106 +25,85 @@ class TeacherSchedulePage extends StatelessWidget {
             )
             .snapshots(),
 
-
         builder: (context, snapshot) {
 
-
-          if(snapshot.connectionState ==
-              ConnectionState.waiting){
-
+          if (snapshot.connectionState ==
+              ConnectionState.waiting) {
             return const Center(
               child: CircularProgressIndicator(),
             );
           }
 
 
-
-          if(!snapshot.hasData ||
-              snapshot.data!.docs.isEmpty){
+          if (!snapshot.hasData ||
+              snapshot.data!.docs.isEmpty) {
 
             return const Center(
-              child: Text('Нет пар'),
+              child: Text(
+                "Нет пар",
+                style: TextStyle(fontSize: 20),
+              ),
             );
-
           }
 
 
-
-          var lessons = snapshot.data!.docs;
-
+          final lessons = snapshot.data!.docs;
 
 
           return ListView.builder(
-
             itemCount: lessons.length,
 
+            itemBuilder: (context, index) {
 
-            itemBuilder: (context,index){
-
-
-              var data =
-              lessons[index].data()
-              as Map<String,dynamic>;
-
+              final data =
+                  lessons[index].data()
+                  as Map<String, dynamic>;
 
 
               return Card(
+                margin: const EdgeInsets.all(10),
 
-                child: Padding(
+                child: ListTile(
 
-                  padding:
-                  const EdgeInsets.all(15),
+                  title: Text(
+                    data['subject'] ?? '',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
 
 
-                  child: Column(
-
+                  subtitle: Column(
                     crossAxisAlignment:
-                    CrossAxisAlignment.start,
-
+                        CrossAxisAlignment.start,
 
                     children: [
 
-
                       Text(
-                        data['subject'] ?? '',
-                        style:
-                        const TextStyle(
-                          fontSize:20,
-                          fontWeight:
-                          FontWeight.bold,
-                        ),
+                        "День: ${data['day']}",
                       ),
 
-
                       Text(
-                        'День: ${data['day']}',
+                        "Группа: ${data['group']}",
                       ),
 
-
                       Text(
-                        'Группа: ${data['group']}',
+                        "Пара: ${data['lesson']}",
                       ),
 
-
                       Text(
-                        'Пара: ${data['lesson']}',
+                        "Преподаватель: ${data['teacher']}",
                       ),
-
-
 
                     ],
                   ),
                 ),
               );
-
             },
           );
-
         },
-
       ),
-
     );
-
   }
 }

@@ -1,85 +1,211 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'teacher_schedule_page.dart';
+
 
 class TeacherPage extends StatelessWidget {
   const TeacherPage({super.key});
 
+
+  Future<String?> getTeacherName() async {
+
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) return null;
+
+
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+
+
+    if (!doc.exists) return null;
+
+
+    return doc.data()?['name'];
+
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
+
+
     return Scaffold(
+
       appBar: AppBar(
-        title: const Text('Панель преподавателя'),
+        title: const Text("Мои пары"),
       ),
 
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
 
-            const Icon(
-              Icons.school,
-              size: 70,
-            ),
+      body: FutureBuilder<String?>(
 
-            const SizedBox(height: 30),
-
-            ElevatedButton(
-              onPressed: () async {
-
-  final user = FirebaseAuth.instance.currentUser;
-
-  if (user == null) return;
+        future: getTeacherName(),
 
 
-  final result = await FirebaseFirestore.instance
-      .collection('users')
-      .where(
-        'email',
-        isEqualTo: user.email,
-      )
-      .limit(1)
-      .get();
+        builder: (context, teacherSnapshot) {
+
+
+          if (!teacherSnapshot.hasData) {
+
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+
+          }
 
 
 
-  if(result.docs.isEmpty){
-
-    print("Пользователь не найден");
-
-    return;
-
-  }
+          final teacherName = teacherSnapshot.data;
 
 
 
-  final teacherName =
-      result.docs.first['name'];
+          return StreamBuilder<QuerySnapshot>(
+
+
+            stream: FirebaseFirestore.instance
+                .collection('schedule')
+                .where(
+                  'teacher',
+                  isEqualTo: teacherName,
+                )
+                .snapshots(),
 
 
 
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context)=>
-      TeacherSchedulePage(
-        teacherName: teacherName,
+            builder: (context, snapshot) {
+
+
+
+              if (!snapshot.hasData) {
+
+                return const Center(
+                  child: CircularProgressIndicator(),
+                );
+
+              }
+
+
+
+              if (snapshot.data!.docs.isEmpty) {
+
+                return const Center(
+                  child: Text(
+                    "Нет пар",
+                    style: TextStyle(
+                      fontSize: 20,
+                    ),
+                  ),
+                );
+
+              }
+
+
+
+              return ListView.builder(
+
+
+                itemCount: snapshot.data!.docs.length,
+
+
+                itemBuilder: (context, index) {
+
+
+                  final data =
+                  snapshot.data!.docs[index].data()
+                  as Map<String, dynamic>;
+
+
+
+                  return Card(
+
+                    margin: const EdgeInsets.all(10),
+
+
+                    child: Padding(
+
+                      padding: const EdgeInsets.all(15),
+
+
+                      child: Column(
+
+                        crossAxisAlignment:
+                        CrossAxisAlignment.start,
+
+
+                        children: [
+
+
+                          Text(
+
+                            data['subject'] ?? '',
+
+                            style: const TextStyle(
+
+                              fontSize: 22,
+
+                              fontWeight:
+                              FontWeight.bold,
+
+                            ),
+
+                          ),
+
+
+
+                          const SizedBox(height: 10),
+
+
+
+                          Text(
+                            "День: ${data['day']}",
+                          ),
+
+
+                          Text(
+                            "Группа: ${data['group']}",
+                          ),
+
+
+                          Text(
+                            "Пара: ${data['lesson']}",
+                          ),
+
+
+                          Text(
+                            "Преподаватель: ${data['teacher']}",
+                          ),
+
+
+
+                        ],
+
+                      ),
+
+                    ),
+
+                  );
+
+
+                },
+
+              );
+
+
+            },
+
+          );
+
+
+        },
+
       ),
-    ),
-  );
 
-
-},
-
-              child: const Text(
-                "Мои пары",
-              ),
-            ),
-
-          ],
-        ),
-      ),
     );
+
+
   }
+
 }
