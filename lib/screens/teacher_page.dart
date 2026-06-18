@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'teacher_schedule_page.dart';
 
 class TeacherPage extends StatelessWidget {
@@ -25,7 +26,7 @@ class TeacherPage extends StatelessWidget {
             const SizedBox(height: 30),
 
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
 
                 final user = FirebaseAuth.instance.currentUser;
 
@@ -33,11 +34,18 @@ class TeacherPage extends StatelessWidget {
                   return;
                 }
 
+                final doc  = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get();
+
+                final teacherName = doc['name'];
+
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => TeacherSchedulePage(
-                      teacherId: user.uid,
+                    builder: (context) =>TeacherSchedulePage(
+                      teacherName: teacherName,
                     ),
                   ),
                 );

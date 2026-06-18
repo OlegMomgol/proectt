@@ -2,43 +2,37 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TeacherSchedulePage extends StatelessWidget {
-  final String teacherId;
-
-  const TeacherSchedulePage({
-    super.key,
-    required this.teacherId,
-  });
+  const TeacherSchedulePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Мои пары"),
+        title: const Text('Мои пары'),
       ),
 
-      body: StreamBuilder(
+      body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('schedule')
             .snapshots(),
 
         builder: (context, snapshot) {
 
-          if (!snapshot.hasData) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
               child: CircularProgressIndicator(),
             );
           }
 
 
-          final lessons = snapshot.data!.docs;
-
-
-          if (lessons.isEmpty) {
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(
-              child: Text("У вас нет пар"),
+              child: Text('Нет пар'),
             );
           }
+
+
+          var lessons = snapshot.data!.docs;
 
 
           return ListView.builder(
@@ -47,31 +41,61 @@ class TeacherSchedulePage extends StatelessWidget {
 
             itemBuilder: (context, index) {
 
-              final data = lessons[index].data();
+              var data = lessons[index].data()
+                  as Map<String, dynamic>;
 
 
               return Card(
 
-                child: ListTile(
+                margin: const EdgeInsets.all(10),
 
-                  title: Text(
-                    "${data['subject']}",
+                child: Padding(
+
+                  padding: const EdgeInsets.all(15),
+
+                  child: Column(
+
+                    crossAxisAlignment:
+                    CrossAxisAlignment.start,
+
+
+                    children: [
+
+                      Text(
+                        data['subject'] ?? '',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+
+                      Text(
+                        'День: ${data['day'] ?? ''}',
+                      ),
+
+
+                      Text(
+                        'Группа: ${data['group'] ?? ''}',
+                      ),
+
+
+                      Text(
+                        'Пара: ${data['lesson'] ?? ''}',
+                      ),
+
+
+                      Text(
+                        'Преподаватель: ${data['teacher'] ?? ''}',
+                      ),
+
+
+                    ],
                   ),
-
-
-                  subtitle: Text(
-                    "День: ${data['day']}\n"
-                    "Группа: ${data['group']}\n"
-                    "Пара: ${data['lesson']}\n"
-                    "Преподаватель: ${data['teacher']}",
-                  ),
-
                 ),
               );
-
             },
           );
-
         },
       ),
     );
