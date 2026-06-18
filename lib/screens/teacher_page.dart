@@ -28,29 +28,49 @@ class TeacherPage extends StatelessWidget {
             ElevatedButton(
               onPressed: () async {
 
-                final user = FirebaseAuth.instance.currentUser;
+  final user = FirebaseAuth.instance.currentUser;
 
-                if (user == null) {
-                  return;
-                }
+  if (user == null) return;
 
-                final doc  = await FirebaseFirestore.instance
-                .collection('users')
-                .doc(user.uid)
-                .get();
 
-                final teacherName = doc['name'];
+  final result = await FirebaseFirestore.instance
+      .collection('users')
+      .where(
+        'email',
+        isEqualTo: user.email,
+      )
+      .limit(1)
+      .get();
 
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>TeacherSchedulePage(
-                      teacherName: teacherName,
-                    ),
-                  ),
-                );
 
-              },
+
+  if(result.docs.isEmpty){
+
+    print("Пользователь не найден");
+
+    return;
+
+  }
+
+
+
+  final teacherName =
+      result.docs.first['name'];
+
+
+
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context)=>
+      TeacherSchedulePage(
+        teacherName: teacherName,
+      ),
+    ),
+  );
+
+
+},
 
               child: const Text(
                 "Мои пары",

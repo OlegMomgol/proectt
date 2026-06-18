@@ -2,56 +2,85 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TeacherSchedulePage extends StatelessWidget {
-  const TeacherSchedulePage({super.key});
+
+  final String teacherName;
+
+  const TeacherSchedulePage({
+    super.key,
+    required this.teacherName,
+  });
+
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
+
       appBar: AppBar(
         title: const Text('Мои пары'),
       ),
 
+
       body: StreamBuilder<QuerySnapshot>(
+
         stream: FirebaseFirestore.instance
             .collection('schedule')
+            .where(
+              'teacher',
+              isEqualTo: teacherName,
+            )
             .snapshots(),
+
 
         builder: (context, snapshot) {
 
-          if (snapshot.connectionState == ConnectionState.waiting) {
+
+          if(snapshot.connectionState ==
+              ConnectionState.waiting){
+
             return const Center(
               child: CircularProgressIndicator(),
             );
           }
 
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+
+          if(!snapshot.hasData ||
+              snapshot.data!.docs.isEmpty){
+
             return const Center(
               child: Text('Нет пар'),
             );
+
           }
 
 
+
           var lessons = snapshot.data!.docs;
+
 
 
           return ListView.builder(
 
             itemCount: lessons.length,
 
-            itemBuilder: (context, index) {
 
-              var data = lessons[index].data()
-                  as Map<String, dynamic>;
+            itemBuilder: (context,index){
+
+
+              var data =
+              lessons[index].data()
+              as Map<String,dynamic>;
+
 
 
               return Card(
 
-                margin: const EdgeInsets.all(10),
-
                 child: Padding(
 
-                  padding: const EdgeInsets.all(15),
+                  padding:
+                  const EdgeInsets.all(15),
+
 
                   child: Column(
 
@@ -61,43 +90,47 @@ class TeacherSchedulePage extends StatelessWidget {
 
                     children: [
 
+
                       Text(
                         data['subject'] ?? '',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                        style:
+                        const TextStyle(
+                          fontSize:20,
+                          fontWeight:
+                          FontWeight.bold,
                         ),
                       ),
 
 
                       Text(
-                        'День: ${data['day'] ?? ''}',
+                        'День: ${data['day']}',
                       ),
 
 
                       Text(
-                        'Группа: ${data['group'] ?? ''}',
+                        'Группа: ${data['group']}',
                       ),
 
 
                       Text(
-                        'Пара: ${data['lesson'] ?? ''}',
+                        'Пара: ${data['lesson']}',
                       ),
 
-
-                      Text(
-                        'Преподаватель: ${data['teacher'] ?? ''}',
-                      ),
 
 
                     ],
                   ),
                 ),
               );
+
             },
           );
+
         },
+
       ),
+
     );
+
   }
 }
